@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "model_id": "mixedbread-ai/mxbai-rerank-xsmall-v1",
+  "model_version": "mxbai-rerank-xsmall-v1-base-q8-focuify-export-1",
+  "source_model": "mixedbread-ai/mxbai-rerank-xsmall-v1",
+  "source_revision": "b5c6e9da73abc3711f593f705371cdbe9e0fe422",
+  "model_path": "model",
+  "model_file": "onnx/model_quantized.onnx",
+  "model_sha256": "b5abfa1fb49eba33f76bfb58ec7cdb41c05c372dc1ae5579679143f6316c8531",
+  "threshold": 0.5,
+  "dtype": "q8",
+  "score_transform": "sigmoid",
+  "max_length": 256,
+  "status": "ready"
+}

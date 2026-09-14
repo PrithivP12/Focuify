@@ -1,0 +1,7 @@
+*.model binary
+*.onnx binary
+*.png binary
+*.wasm binary
+local-model/model/tokenizer.json linguist-generated=true
+vendor/*.js linguist-vendored
+vendor/*.mjs linguist-vendored

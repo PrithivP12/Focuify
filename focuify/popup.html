@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Focuify</title>
+    <link rel="icon" href="icon.png" />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <div class="brand">
+          <img class="brand-logo" src="focuify-logo.png" alt="Focuify" />
+        </div>
+        <span id="focusModePill" class="pill">Off</span>
+      </header>
+
+      <nav class="tabs" role="tablist" aria-label="Focuify sections">
+        <button
+          id="focusTab"
+          class="tab active"
+          type="button"
+          role="tab"
+          aria-selected="true"
+          aria-controls="focusView"
+        >
+          Focus
+        </button>
+        <button
+          id="settingsTab"
+          class="tab"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          aria-controls="settingsView"
+        >
+          Settings
+        </button>
+      </nav>
+
+      <section
+        id="focusView"
+        class="view"
+        role="tabpanel"
+        aria-labelledby="focusTab"
+      >
+        <section class="card focus-card">
+          <div class="title-row">
+            <div>
+              <h2 id="focusStateTitle">Choose your focus</h2>
+              <p id="focusStateCopy" class="supporting">
+                Set one clear goal for this session.
+              </p>
+            </div>
+            <label class="toggle" for="enabled"
+              ><input id="enabled" type="checkbox" /><span
+                aria-hidden="true"
+              ></span
+            ></label>
+          </div>
+          <div class="field">
+            <label for="focusGoal">Focus goal</label>
+            <textarea
+              id="focusGoal"
+              rows="3"
+              maxlength="220"
+              placeholder="Study cellular respiration"
+            ></textarea>
+          </div>
+          <button id="saveButton" class="button primary wide" type="button">
+            Start focus session
+          </button>
+          <p id="statusText" class="status" role="status"></p>
+        </section>
+      </section>
+
+      <section
+        id="settingsView"
+        class="view"
+        role="tabpanel"
+        aria-labelledby="settingsTab"
+        hidden
+      >
+        <section class="card settings-card">
+          <div>
+            <h2>Settings</h2>
+            <p class="supporting">Adjust how Focuify works for you.</p>
+          </div>
+          <div class="setting-group">
+            <div class="field">
+              <div class="label-row">
+                <label for="threshold">Blocking level</label>
+                <strong id="thresholdValue" class="value-badge"
+                  >Balanced</strong
+                >
+              </div>
+              <input
+                id="threshold"
+                type="range"
+                min="0.20"
+                max="0.80"
+                step="0.01"
+              />
+              <div class="range-labels">
+                <span>Lenient</span><span>Strict</span>
+              </div>
+            </div>
+          </div>
+          <div class="setting-group">
+            <div class="field-grid even">
+              <div class="field">
+                <label for="themeMode">Theme</label>
+                <select id="themeMode">
+                  <option value="light">Light</option>
+                  <option value="dark">Dark</option>
+                  <option value="zen">Zen</option>
+                </select>
+              </div>
+              <div class="field">
+                <div class="label-row">
+                  <label for="fontScale">Text size</label>
+                  <strong id="fontScaleValue" class="plain-value">100%</strong>
+                </div>
+                <input
+                  id="fontScale"
+                  type="range"
+                  min="0.85"
+                  max="1.25"
+                  step="0.05"
+                />
+              </div>
+            </div>
+            <div class="setting-row">
+              <strong>Higher contrast</strong>
+              <label class="toggle" for="highContrast"
+                ><input id="highContrast" type="checkbox" /><span
+                  aria-hidden="true"
+                ></span
+              ></label>
+            </div>
+            <div class="setting-row">
+              <strong>Reduce motion</strong>
+              <label class="toggle" for="reducedMotion"
+                ><input id="reducedMotion" type="checkbox" /><span
+                  aria-hidden="true"
+                ></span
+              ></label>
+            </div>
+          </div>
+          <details class="advanced site-rules">
+            <summary>Site exceptions</summary>
+            <div class="stack">
+              <div class="field">
+                <label for="allowDomains">Always allow</label>
+                <textarea
+                  id="allowDomains"
+                  rows="2"
+                  placeholder="wikipedia.org"
+                ></textarea>
+              </div>
+              <div class="field">
+                <label for="blockDomains">Always block</label>
+                <textarea
+                  id="blockDomains"
+                  rows="2"
+                  placeholder="example.com"
+                ></textarea>
+              </div>
+            </div>
+          </details>
+          <p id="settingsStatusText" class="status autosave" role="status">
+            Changes save automatically.
+          </p>
+        </section>
+      </section>
+
+      <footer class="privacy-note">
+        <span aria-hidden="true">✓</span>
+        <p id="modelInfo" class="model"></p>
+      </footer>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>
