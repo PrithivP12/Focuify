@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Focuify teacher dashboard for managing student focus classes."
+    />
+    <title>Focuify Teacher Dashboard</title>
+    <link rel="icon" href="/teacher/focuify-icon.png" />
+    <link rel="stylesheet" href="/teacher/styles.css" />
+  </head>
+  <body>
+    <main class="shell" id="app">
+      <section class="auth-screen" id="authScreen">
+        <img class="auth-logo" src="/teacher/focuify-logo.png" alt="Focuify" />
+        <h1>For teachers</h1>
+        <p class="lede">
+          Create a class, share the code, and set the focus goal.
+        </p>
+        <div class="auth-card">
+          <div class="auth-tabs" role="tablist" aria-label="Account actions">
+            <button
+              class="tab active"
+              id="loginTab"
+              type="button"
+              role="tab"
+              aria-selected="true"
+            >
+              Sign in
+            </button>
+            <button
+              class="tab"
+              id="registerTab"
+              type="button"
+              role="tab"
+              aria-selected="false"
+            >
+              Create account
+            </button>
+          </div>
+          <form id="authForm" class="stack" autocomplete="on">
+            <div id="nameField" class="field hidden">
+              <label for="teacherName">Your name</label
+              ><input
+                id="teacherName"
+                name="name"
+                autocomplete="name"
+                maxlength="80"
+              />
+            </div>
+            <div class="field">
+              <label for="teacherEmail">School email</label
+              ><input
+                id="teacherEmail"
+                name="email"
+                type="email"
+                autocomplete="email"
+                required
+                maxlength="160"
+              />
+            </div>
+            <div class="field">
+              <label for="teacherPassword">Password</label
+              ><input
+                id="teacherPassword"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                minlength="10"
+                required
+              /><small>Use at least 10 characters.</small>
+            </div>
+            <button class="button primary wide" type="submit" id="authSubmit">
+              Sign in
+            </button>
+            <p class="form-message" id="authMessage" role="alert"></p>
+          </form>
+        </div>
+      </section>
+
+      <section class="dashboard hidden" id="dashboardScreen">
+        <header class="topbar">
+          <div class="brand">
+            <img
+              class="dashboard-logo"
+              src="/teacher/focuify-logo.png"
+              alt="Focuify"
+            /><span class="dashboard-label">Teacher dashboard</span>
+          </div>
+          <div class="topbar-actions">
+            <span id="teacherIdentity" class="identity"></span
+            ><button class="button ghost" id="signOutButton" type="button">
+              Sign out
+            </button>
+          </div>
+        </header>
+
+        <div class="dashboard-grid">
+          <aside class="sidebar card">
+            <div class="sidebar-heading">
+              <div>
+                <p class="eyebrow">Your classes</p>
+                <h2>Classes</h2>
+              </div>
+              <button
+                class="icon-button"
+                id="newClassButton"
+                type="button"
+                aria-label="Create a class"
+              >
+                +
+              </button>
+            </div>
+            <div id="classList" class="class-list">
+              <p class="muted">Loading classes…</p>
+            </div>
+            <form id="newClassForm" class="new-class-form hidden">
+              <label for="newClassName">New class name</label
+              ><input
+                id="newClassName"
+                maxlength="100"
+                placeholder="Biology · Period 2"
+                required
+              /><button class="button primary wide" type="submit">
+                Create class</button
+              ><button
+                class="button ghost wide"
+                id="cancelNewClassButton"
+                type="button"
+              >
+                Cancel
+              </button>
+              <p class="form-message" id="classMessage"></p>
+            </form>
+          </aside>
+
+          <section class="workspace" id="workspace">
+            <div class="empty-state card" id="emptyState">
+              <div class="empty-icon">◎</div>
+              <h2>Create your first class</h2>
+              <p>
+                Students join with a six-character code. Your focus goal and
+                strictness are synced to their extension.
+              </p>
+              <button
+                class="button primary"
+                id="emptyCreateButton"
+                type="button"
+              >
+                Create a class
+              </button>
+            </div>
+
+            <div class="class-view hidden" id="classView">
+              <div class="class-heading">
+                <div>
+                  <p class="eyebrow">Active class</p>
+                  <h2 id="classTitle">Class</h2>
+                  <p class="muted" id="classUpdated"></p>
+                </div>
+                <button class="button ghost" id="refreshButton" type="button">
+                  Refresh
+                </button>
+              </div>
+              <div class="code-policy-grid">
+                <section class="code-card card">
+                  <div>
+                    <p class="eyebrow">Student join code</p>
+                    <div class="join-code" id="joinCode">------</div>
+                    <p class="muted">
+                      Share this code with students. Rotating it prevents new
+                      joins with the old code.
+                    </p>
+                  </div>
+                  <button
+                    class="button ghost"
+                    id="rotateCodeButton"
+                    type="button"
+                  >
+                    Rotate code
+                  </button>
+                  <p class="form-message" id="codeMessage"></p>
+                </section>
+                <section class="policy-card card">
+                  <div class="section-title">
+                    <div>
+                      <p class="eyebrow">Class policy</p>
+                      <h3>Shared focus goal</h3>
+                    </div>
+                    <span class="managed-badge">Synced to students</span>
+                  </div>
+                  <form id="policyForm" class="stack">
+                    <label class="toggle"
+                      ><input id="policyEnabled" type="checkbox" /><span
+                        >Focus mode enabled for this class</span
+                      ></label
+                    ><label class="toggle"
+                      ><input id="searchGuardEnabled" type="checkbox" /><span
+                        >Block unrelated Google searches</span
+                      ></label
+                    >
+                    <div class="field">
+                      <label for="policyGoal"
+                        >What is the class working on?</label
+                      ><textarea
+                        id="policyGoal"
+                        rows="3"
+                        maxlength="220"
+                        placeholder="Example: Explain the causes of the American Revolution"
+                      ></textarea>
+                    </div>
+                    <div class="field">
+                      <label for="policyThreshold"
+                        >Blocking strictness
+                        <strong id="policyThresholdValue"
+                          >Balanced</strong
+                        ></label
+                      ><input
+                        id="policyThreshold"
+                        type="range"
+                        min="0.20"
+                        max="0.80"
+                        step="0.01"
+                      />
+                      <div class="range-labels">
+                        <span>Lenient</span><span>Strict</span>
+                      </div>
+                    </div>
+                    <button class="button primary" type="submit">
+                      Save class policy
+                    </button>
+                    <p class="form-message" id="policyMessage"></p>
+                  </form>
+                </section>
+              </div>
+
+              <div class="metrics" id="metrics">
+                <div class="metric card">
+                  <span>Connected</span
+                  ><strong id="connectedStudents">0</strong>
+                </div>
+                <div class="metric card">
+                  <span>Focused</span><strong id="focusedStudents">0</strong>
+                </div>
+                <div class="metric card">
+                  <span>Blocked now</span
+                  ><strong id="blockedStudents">0</strong>
+                </div>
+                <div class="metric card">
+                  <span>Disconnected</span
+                  ><strong id="disconnectedStudents">0</strong>
+                </div>
+                <div class="metric card">
+                  <span>Blocked attempts</span
+                  ><strong id="blockedAttempts">0</strong>
+                </div>
+                <div class="metric card">
+                  <span>Class focus</span
+                  ><strong id="focusPercentage">—</strong>
+                </div>
+              </div>
+
+              <section class="card data-card">
+                <div class="section-title">
+                  <div>
+                    <p class="eyebrow">Live session</p>
+                    <h3>Student status</h3>
+                  </div>
+                  <div class="roster-actions">
+                    <span class="muted" id="rosterCount"></span
+                    ><button
+                      class="remove-all-students"
+                      id="removeAllStudentsButton"
+                      type="button"
+                    >
+                      Remove all
+                    </button>
+                  </div>
+                </div>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Student</th>
+                        <th>Current status</th>
+                        <th>Last seen</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody id="rosterBody">
+                      <tr>
+                        <td colspan="4" class="muted">
+                          No students have joined yet.
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+              <section class="card privacy-card">
+                <div class="privacy-mark" aria-hidden="true">✓</div>
+                <div>
+                  <p class="eyebrow">Student privacy</p>
+                  <h3>Relevance stays on the student device</h3>
+                  <p class="muted">
+                    Focuify never sends teachers webpage contents, URLs,
+                    domains, search queries, page titles, or browsing timelines.
+                    The dashboard receives only current status and aggregate
+                    session counts.
+                  </p>
+                </div>
+              </section>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+    <script src="/teacher/app.js"></script>
+  </body>
+</html>
