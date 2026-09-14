@@ -7,7 +7,6 @@
 
   const PAGE_SCAN_DELAY_MS = 420;
   const PAGE_SCAN_RETRY_MS = 1600;
-  const HEARTBEAT_INTERVAL_MS = 30_000;
   const PAGE_MAX_CHARS = 1800;
   const MAX_KEYWORDS = 36;
   const ACCESSIBILITY_STYLE_ID = "focuify-accessibility-style";
@@ -77,13 +76,6 @@
       if (message?.type === "FOCUIFY_ACCESSIBILITY_CHANGED")
         applyAccessibility(message.settings);
     });
-    setInterval(() => {
-      if (document.visibilityState !== "hidden")
-        chrome.runtime.sendMessage(
-          { type: "FOCUIFY_HEARTBEAT" },
-          () => void chrome.runtime.lastError,
-        );
-    }, HEARTBEAT_INTERVAL_MS);
   }
 
   function scheduleScan(force = false) {

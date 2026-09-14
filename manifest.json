@@ -1,12 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "Focuify Student",
+  "name": "Focuify",
   "version": "1.0.0",
-  "description": "A local-first student focus extension with optional teacher class-code enrollment and policy sync.",
+  "description": "A private, local-first extension that keeps browsing aligned with a focus goal.",
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
   },
-  "permissions": ["storage", "tabs", "webNavigation", "scripting", "offscreen"],
+  "permissions": ["storage", "webNavigation", "scripting", "offscreen"],
   "host_permissions": ["http://*/*", "https://*/*"],
   "background": {
     "service_worker": "service_worker.js",

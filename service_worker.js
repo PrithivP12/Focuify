@@ -1,20 +1,15 @@
 import { requestTextRanking } from "./local-model/client.js";
 import {
   compactPageEvidence,
-  extractKeywords,
-  extractSearchQuery,
   rankingDocuments,
   sanitizeText,
 } from "./keywordUtils.js";
 
-const RUNTIME_MODEL_ID = "mxbai-rerank-xsmall-v1-base-q8";
 const DEFAULT_SIMILARITY_THRESHOLD = 0.5;
-const SETTINGS_SCHEMA_VERSION = 2;
 const DEFAULT_SETTINGS = Object.freeze({
   enabled: false,
   focusGoal: "",
   similarityThreshold: DEFAULT_SIMILARITY_THRESHOLD,
-  searchGuardEnabled: false,
   allowDomains: [],
   blockDomains: [],
   themeMode: "light",
@@ -25,98 +20,25 @@ const DEFAULT_SETTINGS = Object.freeze({
 
 const DECISION_CACHE_TTL_MS = 15 * 60 * 1000;
 const DECISION_CACHE_MAX = 800;
-const SEARCH_DECISION_TTL_MS = 3 * 1000;
 const ONE_TIME_BYPASS_TTL_MS = 10 * 60 * 1000;
-const DEFAULT_API_BASE_URL = "http://localhost:8787";
-const CLASS_POLICY_TTL_MS = 60 * 1000;
-const CLASS_SESSION_STORAGE_KEY = "classSession";
-const DEVICE_ID_STORAGE_KEY = "focuifyDeviceId";
-const LEGACY_DEVICE_ID_STORAGE_KEY = "focusforgeDeviceId";
-const PRE_CLASS_SETTINGS_STORAGE_KEY = "preClassSettings";
 const BLOCKED_CONTEXT_PREFIX = "blockedContext:";
-const OBSOLETE_STORAGE_KEYS = [
-  "focusGoals",
-  "activeGoalIndex",
-  "quizDefaultDifficulty",
-  "quizDefaultFormat",
-  "thresholdProfile",
-  "thresholdAutoRampEnabled",
-  "thresholdRampStepMinutes",
-  "thresholdRampDelta",
-  "thresholdRampMaxDelta",
-  "scheduleEnabled",
-  "scheduleStart",
-  "scheduleEnd",
-  "scheduleWeekdays",
-  "categoryBlockingEnabled",
-  "blockedCategories",
-  "categoryAllowOnHighRelevance",
-  "pomodoroEnabled",
-  "pomodoroWorkMinutes",
-  "pomodoroBreakMinutes",
-  "pomodoroLongBreakMinutes",
-  "pomodoroLongBreakEvery",
-  "pomodoroAutoStartBreak",
-  "pomodoroAutoStartWork",
-  "pomodoroState",
-  "blockUntilTasksDone",
-  "tasks",
-  "integrationHooksEnabled",
-  "integrationAllowDomains",
-  "reminderSnoozeUntil",
-  "reminderFrequencyMinutes",
-  "reminderOffTrackEnabled",
-  "reminderWinEnabled",
-  "syncEnabled",
-  "notificationsEnabled",
-  "adBlockEnabled",
-  "cosmeticAdBlockEnabled",
-  "adBlockState",
-  "adBlockLiveState",
-  "focusStats",
-  "decisionLog",
-  "ff_turns",
-  "ff_summary",
-  "modelFallbackEnabled",
-  "embeddingModelId",
-  "embeddingBackendPreference",
-];
-const MODEL_RUNTIME_STATS_DEFAULT = Object.freeze({
-  modelVersion: "not-loaded",
-  loadDurationMs: 0,
-  inferenceCount: 0,
-  avgInferenceMs: 0,
-});
 
 let settings = { ...DEFAULT_SETTINGS };
-let modelRuntimeStats = { ...MODEL_RUNTIME_STATS_DEFAULT };
 let modelWarmPromise = null;
-let policySyncPromise = null;
-let lastModelError = "";
 let isReady = false;
-let classSession = null;
-let preClassSettings = null;
-let lastReportedStatus = "";
-let lastStatusReportedAt = 0;
 const decisionCache = new Map();
 const oneTimeBypassByTab = new Map();
-const searchDecisionByTab = new Map();
 const blockingTabs = new Set();
 const initPromise = init();
 
 chrome.runtime.onInstalled.addListener(() => {
-  void hydrateSettings(true);
+  void hydrateSettings();
 });
 chrome.runtime.onStartup.addListener(() => {
-  void hydrateSettings(false);
+  void hydrateSettings();
 });
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName !== "local") return;
-  if (changes.modelRuntimeStats) {
-    modelRuntimeStats = sanitizeModelRuntimeStats(
-      changes.modelRuntimeStats.newValue,
-    );
-  }
   const patch = {};
   for (const key of Object.keys(DEFAULT_SETTINGS)) {
     if (changes[key]) patch[key] = changes[key].newValue;
@@ -144,7 +66,6 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 });
 chrome.tabs.onRemoved.addListener((tabId) => {
   oneTimeBypassByTab.delete(tabId);
-  searchDecisionByTab.delete(tabId);
   blockingTabs.delete(tabId);
   void chrome.storage.session.remove(`${BLOCKED_CONTEXT_PREFIX}${tabId}`);
 });
@@ -174,11 +95,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({
         ok: true,
         settings: { ...settings },
-        enrollment: publicClassSession(),
-        classManaged: Boolean(classSession),
-        runtimeModelId: RUNTIME_MODEL_ID,
-        modelRuntimeStats: { ...modelRuntimeStats },
-        lastModelError,
       }),
     );
     return true;
@@ -191,51 +107,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       );
     return true;
   }
-  if (type === "JOIN_CLASS") {
-    void joinClass(message?.payload)
-      .then((result) => sendResponse({ ok: true, ...result }))
-      .catch((error) =>
-        sendResponse({ ok: false, error: String(error?.message || error) }),
-      );
-    return true;
-  }
-  if (type === "LEAVE_CLASS") {
-    void leaveClass()
-      .then((result) => sendResponse({ ok: true, ...result }))
-      .catch((error) =>
-        sendResponse({ ok: false, error: String(error?.message || error) }),
-      );
-    return true;
-  }
-  if (type === "SYNC_CLASS_POLICY") {
-    void syncClassPolicy(true)
-      .then(() =>
-        sendResponse({
-          ok: true,
-          settings: { ...settings },
-          enrollment: publicClassSession(),
-        }),
-      )
-      .catch((error) =>
-        sendResponse({
-          ok: false,
-          error: String(error?.message || error),
-          settings: { ...settings },
-          enrollment: publicClassSession(),
-        }),
-      );
-    return true;
-  }
   if (type === "GET_ACCESSIBILITY_SETTINGS") {
     void initPromise.then(() =>
       sendResponse({ ok: true, settings: publicAccessibilitySettings() }),
     );
-    return true;
-  }
-  if (type === "FOCUIFY_HEARTBEAT") {
-    void heartbeatClass()
-      .then(() => sendResponse({ ok: true }))
-      .catch(() => sendResponse({ ok: false }));
     return true;
   }
   if (type === "GET_BLOCK_CONTEXT") {
@@ -277,483 +152,35 @@ async function init() {
   await chrome.storage.session.setAccessLevel({
     accessLevel: "TRUSTED_CONTEXTS",
   });
-  await hydrateSettings(false);
+  await hydrateSettings();
   isReady = true;
   if (isFocusModeActive()) void warmLocalModel();
-  if (classSession) void syncClassPolicy(false);
 }
 
-async function hydrateSettings(seedDefaults) {
-  const stored = await chrome.storage.local.get({
-    ...DEFAULT_SETTINGS,
-    settingsSchemaVersion: 0,
-  });
-  const migrateLegacyThreshold =
-    Number(stored.settingsSchemaVersion) < SETTINGS_SCHEMA_VERSION &&
-    Number(stored.similarityThreshold) === 0.35;
-  settings = sanitizeSettings({
-    ...stored,
-    similarityThreshold: migrateLegacyThreshold
-      ? DEFAULT_SIMILARITY_THRESHOLD
-      : stored.similarityThreshold,
-  });
-  const classStored = await chrome.storage.local.get({
-    [CLASS_SESSION_STORAGE_KEY]: null,
-    [PRE_CLASS_SETTINGS_STORAGE_KEY]: null,
-  });
-  classSession = sanitizeClassSession(classStored[CLASS_SESSION_STORAGE_KEY]);
-  preClassSettings = sanitizePreClassSettings(
-    classStored[PRE_CLASS_SETTINGS_STORAGE_KEY],
+async function hydrateSettings() {
+  const stored = await chrome.storage.local.get(DEFAULT_SETTINGS);
+  settings = sanitizeSettings(stored);
+  await chrome.storage.local.set(settings);
+  const currentKeys = new Set(Object.keys(DEFAULT_SETTINGS));
+  const unusedKeys = Object.keys(await chrome.storage.local.get(null)).filter(
+    (key) => !currentKeys.has(key),
   );
-  if (
-    migrateLegacyThreshold &&
-    classSession?.policy?.similarityThreshold === 0.35
-  ) {
-    classSession = sanitizeClassSession({
-      ...classSession,
-      policy: {
-        ...classSession.policy,
-        similarityThreshold: DEFAULT_SIMILARITY_THRESHOLD,
-      },
-    });
-  }
-  if (
-    migrateLegacyThreshold &&
-    preClassSettings?.similarityThreshold === 0.35
-  ) {
-    preClassSettings = sanitizePreClassSettings({
-      ...preClassSettings,
-      similarityThreshold: DEFAULT_SIMILARITY_THRESHOLD,
-    });
-  }
-  modelRuntimeStats = sanitizeModelRuntimeStats(
-    (
-      await chrome.storage.local.get({
-        modelRuntimeStats: MODEL_RUNTIME_STATS_DEFAULT,
-      })
-    ).modelRuntimeStats,
-  );
-  if (seedDefaults || migrateLegacyThreshold)
-    await chrome.storage.local.set({
-      ...settings,
-      settingsSchemaVersion: SETTINGS_SCHEMA_VERSION,
-      modelRuntimeStats,
-      ...(classSession ? { [CLASS_SESSION_STORAGE_KEY]: classSession } : {}),
-      ...(preClassSettings
-        ? { [PRE_CLASS_SETTINGS_STORAGE_KEY]: preClassSettings }
-        : {}),
-    });
-  await chrome.storage.local.remove(OBSOLETE_STORAGE_KEYS);
+  if (unusedKeys.length) await chrome.storage.local.remove(unusedKeys);
 }
 
 async function saveSettings(payload) {
   await initPromise;
-  const requested = payload || {};
-  const managedPatch = classSession
-    ? {
-        ...requested,
-        enabled: settings.enabled,
-        focusGoal: settings.focusGoal,
-        similarityThreshold: settings.similarityThreshold,
-        searchGuardEnabled: settings.searchGuardEnabled,
-        allowDomains: settings.allowDomains,
-        blockDomains: settings.blockDomains,
-      }
-    : requested;
-  const next = sanitizeSettings({ ...settings, ...managedPatch });
+  const next = sanitizeSettings({ ...settings, ...(payload || {}) });
   const shouldWarm =
     next.enabled &&
     next.focusGoal &&
     (!settings.enabled || next.focusGoal !== settings.focusGoal);
   settings = next;
   clearDecisionCache();
-  await chrome.storage.local.set({
-    ...next,
-    settingsSchemaVersion: SETTINGS_SCHEMA_VERSION,
-  });
+  await chrome.storage.local.set(next);
   if (shouldWarm) void warmLocalModel();
   return {
     settings: { ...settings },
-    enrollment: publicClassSession(),
-    classManaged: Boolean(classSession),
-    modelRuntimeStats: { ...modelRuntimeStats },
-  };
-}
-
-async function joinClass(payload) {
-  await initPromise;
-  const previousSession = classSession;
-  const apiBaseUrl = normalizeApiBaseUrl(
-    payload?.apiBaseUrl || DEFAULT_API_BASE_URL,
-  );
-  const classCode = String(payload?.classCode || "")
-    .trim()
-    .toUpperCase();
-  const studentName = sanitizeText(payload?.studentName, 80)
-    .replace(/\s+/g, " ")
-    .trim();
-  if (!apiBaseUrl)
-    throw new Error(
-      "Enter a valid API URL (for example, http://localhost:8787).",
-    );
-  if (!/^[A-Z2-9]{6}$/.test(classCode))
-    throw new Error("Class codes are six letters or numbers.");
-  if (studentName.length < 2)
-    throw new Error("Enter a name your teacher will recognize.");
-  const deviceId = await getDeviceId();
-  const result = await fetchFocusApi(`${apiBaseUrl}/v1/join`, {
-    method: "POST",
-    body: JSON.stringify({ classCode, name: studentName, deviceId }),
-  });
-  if (!preClassSettings) {
-    preClassSettings = {
-      enabled: settings.enabled,
-      focusGoal: settings.focusGoal,
-      similarityThreshold: settings.similarityThreshold,
-      searchGuardEnabled: settings.searchGuardEnabled,
-      allowDomains: settings.allowDomains,
-      blockDomains: settings.blockDomains,
-    };
-  }
-  const policy = sanitizeTeacherPolicy(result?.class?.policy);
-  classSession = sanitizeClassSession({
-    apiBaseUrl,
-    token: String(result.token || ""),
-    studentId: result?.student?.id,
-    studentName: result?.student?.name || studentName,
-    classId: result?.class?.id,
-    className: result?.class?.name,
-    classCode: result?.class?.classCode || classCode,
-    policy,
-    lastPolicyAt: Date.now(),
-    joinedAt: new Date().toISOString(),
-    lastError: "",
-  });
-  if (
-    !classSession?.token ||
-    !classSession?.studentId ||
-    !classSession?.classId
-  )
-    throw new Error("The class server returned an incomplete enrollment.");
-  await applyTeacherPolicy(policy);
-  if (
-    previousSession?.token &&
-    (previousSession.classId !== classSession.classId ||
-      previousSession.apiBaseUrl !== classSession.apiBaseUrl)
-  ) {
-    void fetchFocusApi(
-      `${previousSession.apiBaseUrl}/v1/student/leave`,
-      { method: "POST" },
-      previousSession.token,
-    ).catch(() => {});
-  }
-  await chrome.storage.local.set({
-    [CLASS_SESSION_STORAGE_KEY]: classSession,
-    [PRE_CLASS_SETTINGS_STORAGE_KEY]: preClassSettings,
-  });
-  return {
-    settings: { ...settings },
-    enrollment: publicClassSession(),
-    classManaged: true,
-  };
-}
-
-async function leaveClass() {
-  await initPromise;
-  let warning = "";
-  if (classSession?.token) {
-    try {
-      await fetchFocusApi(
-        `${classSession.apiBaseUrl}/v1/student/leave`,
-        { method: "POST" },
-        classSession.token,
-      );
-    } catch {
-      warning = `Local access restored. The server will mark this device offline when it next connects.`;
-    }
-  }
-  await clearClassSession();
-  return {
-    settings: { ...settings },
-    enrollment: null,
-    classManaged: false,
-    warning,
-  };
-}
-
-async function clearClassSession() {
-  settings = sanitizeSettings({ ...settings, ...(preClassSettings || {}) });
-  classSession = null;
-  preClassSettings = null;
-  lastReportedStatus = "";
-  lastStatusReportedAt = 0;
-  clearDecisionCache();
-  await chrome.storage.local.set({ ...settings });
-  await chrome.storage.local.remove([
-    CLASS_SESSION_STORAGE_KEY,
-    PRE_CLASS_SETTINGS_STORAGE_KEY,
-  ]);
-}
-
-async function maybeSyncClassPolicy() {
-  if (!classSession) return;
-  if (Date.now() - Number(classSession.lastPolicyAt || 0) < CLASS_POLICY_TTL_MS)
-    return;
-  await syncClassPolicy(false);
-}
-
-async function syncClassPolicy(force) {
-  await initPromise;
-  if (!classSession?.token) return;
-  if (
-    !force &&
-    Date.now() - Number(classSession.lastPolicyAt || 0) < CLASS_POLICY_TTL_MS
-  )
-    return;
-  if (policySyncPromise) return policySyncPromise;
-  policySyncPromise = updateClassPolicy(force);
-  try {
-    return await policySyncPromise;
-  } finally {
-    policySyncPromise = null;
-  }
-}
-
-async function updateClassPolicy(force) {
-  try {
-    const result = await fetchFocusApi(
-      `${classSession.apiBaseUrl}/v1/student/policy-sync`,
-      {},
-      classSession.token,
-    );
-    const nextPolicy = sanitizeTeacherPolicy(result?.class?.policy);
-    classSession = sanitizeClassSession({
-      ...classSession,
-      classId: result?.class?.id || classSession.classId,
-      className: result?.class?.name || classSession.className,
-      classCode: result?.class?.classCode || classSession.classCode,
-      policy: nextPolicy,
-      lastPolicyAt: Date.now(),
-      lastError: "",
-    });
-    await applyTeacherPolicy(nextPolicy);
-    await chrome.storage.local.set({
-      [CLASS_SESSION_STORAGE_KEY]: classSession,
-    });
-  } catch (error) {
-    if (error?.status === 401 || error?.status === 404) {
-      await clearClassSession();
-      const accessError = new Error(
-        "Your teacher removed this device from the class.",
-      );
-      if (force) throw accessError;
-      return;
-    }
-    classSession = sanitizeClassSession({
-      ...classSession,
-      lastError: String(error?.message || error),
-    });
-    await chrome.storage.local.set({
-      [CLASS_SESSION_STORAGE_KEY]: classSession,
-    });
-    if (force) throw error;
-  }
-}
-
-async function applyTeacherPolicy(policy) {
-  const next = sanitizeSettings({
-    ...settings,
-    enabled: policy.enabled,
-    focusGoal: policy.focusGoal,
-    similarityThreshold: policy.similarityThreshold,
-    searchGuardEnabled: policy.searchGuardEnabled,
-    allowDomains: [],
-    blockDomains: [],
-  });
-  settings = next;
-  clearDecisionCache();
-  await chrome.storage.local.set({
-    enabled: next.enabled,
-    focusGoal: next.focusGoal,
-    similarityThreshold: next.similarityThreshold,
-    searchGuardEnabled: next.searchGuardEnabled,
-    allowDomains: [],
-    blockDomains: [],
-  });
-}
-
-function reportStudentStatus(status) {
-  if (!classSession?.token || !["focused", "blocked"].includes(status)) return;
-  const timestamp = Date.now();
-  if (
-    status === "focused" &&
-    status === lastReportedStatus &&
-    timestamp - lastStatusReportedAt < 30_000
-  )
-    return;
-  lastReportedStatus = status;
-  lastStatusReportedAt = timestamp;
-  void fetchFocusApi(
-    `${classSession.apiBaseUrl}/v1/student/status`,
-    {
-      method: "POST",
-      body: JSON.stringify({ status }),
-    },
-    classSession.token,
-  ).catch(() => {});
-}
-
-async function heartbeatClass() {
-  await initPromise;
-  if (!classSession?.token) return;
-  await fetchFocusApi(
-    `${classSession.apiBaseUrl}/v1/student/heartbeat`,
-    { method: "POST" },
-    classSession.token,
-  );
-}
-
-async function getDeviceId() {
-  const stored = await chrome.storage.local.get({
-    [DEVICE_ID_STORAGE_KEY]: "",
-    [LEGACY_DEVICE_ID_STORAGE_KEY]: "",
-  });
-  const existing = String(
-    stored[DEVICE_ID_STORAGE_KEY] || stored[LEGACY_DEVICE_ID_STORAGE_KEY] || "",
-  );
-  if (/^[a-zA-Z0-9._:-]{12,120}$/.test(existing)) {
-    if (!stored[DEVICE_ID_STORAGE_KEY]) {
-      await chrome.storage.local.set({ [DEVICE_ID_STORAGE_KEY]: existing });
-      await chrome.storage.local.remove(LEGACY_DEVICE_ID_STORAGE_KEY);
-    }
-    return existing;
-  }
-  const generated = `focuify-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`}`;
-  await chrome.storage.local.set({ [DEVICE_ID_STORAGE_KEY]: generated });
-  return generated;
-}
-
-async function fetchFocusApi(url, options = {}, token = "") {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 7000);
-  try {
-    const headers = {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    };
-    if (token) headers.Authorization = `Bearer ${token}`;
-    const response = await fetch(url, {
-      ...options,
-      headers,
-      signal: controller.signal,
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok)
-      throw new FocusApiError(
-        response.status,
-        data?.error?.message || `Server request failed (${response.status}).`,
-      );
-    return data;
-  } catch (error) {
-    if (error?.name === "AbortError")
-      throw new Error("The class server did not respond in time.");
-    throw error;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-function normalizeApiBaseUrl(value) {
-  try {
-    const parsed = new URL(String(value || "").trim());
-    if (
-      !/^https?:$/.test(parsed.protocol) ||
-      parsed.username ||
-      parsed.password
-    )
-      return "";
-    return parsed.toString().replace(/\/$/, "");
-  } catch {
-    return "";
-  }
-}
-
-function sanitizeClassSession(value) {
-  if (!value || typeof value !== "object") return null;
-  const apiBaseUrl = normalizeApiBaseUrl(value.apiBaseUrl);
-  const token = String(value.token || "");
-  const studentId = String(value.studentId || "");
-  const classId = String(value.classId || "");
-  if (!apiBaseUrl || !token || !studentId || !classId) return null;
-  return {
-    apiBaseUrl,
-    token,
-    studentId,
-    studentName: sanitizeText(value.studentName, 80),
-    classId,
-    className: sanitizeText(value.className, 100),
-    classCode: String(value.classCode || "")
-      .toUpperCase()
-      .slice(0, 6),
-    policy: sanitizeTeacherPolicy(value.policy),
-    lastPolicyAt: Math.max(0, Number(value.lastPolicyAt) || 0),
-    joinedAt: String(value.joinedAt || ""),
-    lastError: sanitizeText(value.lastError, 240),
-  };
-}
-
-function publicClassSession() {
-  if (!classSession) return null;
-  return {
-    apiBaseUrl: classSession.apiBaseUrl || DEFAULT_API_BASE_URL,
-    studentId: classSession.studentId,
-    studentName: classSession.studentName,
-    classId: classSession.classId,
-    className: classSession.className,
-    classCode: classSession.classCode,
-    policy: classSession.policy,
-    lastPolicyAt: classSession.lastPolicyAt,
-    joinedAt: classSession.joinedAt,
-    lastError: classSession.lastError,
-  };
-}
-
-function sanitizePreClassSettings(value) {
-  if (!value || typeof value !== "object") return null;
-  return {
-    enabled: Boolean(value.enabled),
-    focusGoal: sanitizeText(value.focusGoal, 220),
-    similarityThreshold: clamp(
-      Number(value.similarityThreshold) || DEFAULT_SIMILARITY_THRESHOLD,
-      0.1,
-      0.9,
-    ),
-    searchGuardEnabled: Boolean(value.searchGuardEnabled),
-    allowDomains: uniqueDomains(
-      Array.isArray(value.allowDomains)
-        ? value.allowDomains
-        : settings.allowDomains,
-    ),
-    blockDomains: uniqueDomains(
-      Array.isArray(value.blockDomains)
-        ? value.blockDomains
-        : settings.blockDomains,
-    ),
-  };
-}
-
-function sanitizeTeacherPolicy(value) {
-  return {
-    enabled: Boolean(value?.enabled),
-    focusGoal: sanitizeText(value?.focusGoal, 220),
-    similarityThreshold: clamp(
-      Number(value?.similarityThreshold) || DEFAULT_SIMILARITY_THRESHOLD,
-      0.1,
-      0.9,
-    ),
-    searchGuardEnabled: Boolean(value?.searchGuardEnabled),
-    version: Math.max(1, Number(value?.version) || 1),
-    updatedAt: String(value?.updatedAt || ""),
   };
 }
 
@@ -774,10 +201,7 @@ async function handleNavigation(details) {
   if (!details || details.frameId !== 0) return;
   const url = String(details.url || "");
   if (!isHttpUrl(url)) return;
-  if (classSession) await syncClassPolicy(true);
-  const tabId = Number(details.tabId);
-  if (await maybeBlockSearchQuery(tabId, url)) return;
-  await maybeBlockByDomain(tabId, url);
+  await maybeBlockByDomain(Number(details.tabId), url);
 }
 
 async function ensurePageScanner(tabId) {
@@ -792,29 +216,21 @@ async function ensurePageScanner(tabId) {
 
 async function handleAnalyzeMessage(message, sender) {
   await initPromise;
-  await maybeSyncClassPolicy();
   const tabId = sender?.tab?.id;
   const payload = message?.payload;
   if (!Number.isFinite(tabId) || !payload || !isFocusModeActive()) return;
   const rawUrl = String(payload.url || "");
   if (!isHttpUrl(rawUrl)) return;
-  if (classSession && extractSearchQuery(rawUrl)) return;
   const host = normalizeDomain(new URL(rawUrl).hostname);
-  if (
-    !host ||
-    isClassServerHost(host) ||
-    hostMatchesAny(host, settings.allowDomains)
-  )
-    return;
+  if (!host || hostMatchesAny(host, settings.allowDomains)) return;
   if (hasValidOneTimeBypass(tabId, host)) return;
   if (hostMatchesAny(host, settings.blockDomains)) {
-    const blocked = await blockTab(tabId, {
+    await blockTab(tabId, {
       url: rawUrl,
       domain: host,
       similarity: 0,
       reason: "Manually blocked domain",
     });
-    if (blocked) reportStudentStatus("blocked");
     return;
   }
 
@@ -824,29 +240,14 @@ async function handleAnalyzeMessage(message, sender) {
   try {
     const score = await scoreRelevance(settings.focusGoal, evidence);
     if (score < threshold) {
-      const blocked = await blockTab(tabId, {
+      await blockTab(tabId, {
         url: rawUrl,
         domain: host,
         similarity: score,
         reason: "This page does not match your focus goal.",
       });
-      if (blocked) reportStudentStatus("blocked");
-    } else {
-      reportStudentStatus("focused");
     }
-  } catch (error) {
-    lastModelError = String(error?.message || error);
-    if (classSession) {
-      const blocked = await blockTab(tabId, {
-        url: rawUrl,
-        domain: host,
-        similarity: 0,
-        reason:
-          "Focuify could not load its local relevance model. This page is blocked until the model is ready.",
-      });
-      if (blocked) reportStudentStatus("blocked");
-    }
-  }
+  } catch {}
 }
 
 async function scoreRelevance(goal, evidence) {
@@ -858,73 +259,12 @@ async function scoreRelevance(goal, evidence) {
   const documents = rankingDocuments(evidence);
   if (!documents.length)
     throw new Error("This page did not provide usable relevance evidence.");
-  const result = await requestTextRanking(goalText, documents);
-  const score = Math.max(...result.scores);
+  const scores = await requestTextRanking(goalText, documents);
+  const score = Math.max(...scores);
   if (!Number.isFinite(score))
     throw new Error("The local relevance model returned no score.");
-  noteInference(result);
   rememberDecision(cacheKey, score);
   return score;
-}
-
-async function maybeBlockSearchQuery(tabId, rawUrl) {
-  const query = extractSearchQuery(rawUrl);
-  if (
-    !query ||
-    !classSession ||
-    !settings.searchGuardEnabled ||
-    !isFocusModeActive()
-  )
-    return false;
-  const host = normalizeDomain(new URL(rawUrl).hostname);
-  if (hasValidOneTimeBypass(tabId, host)) return false;
-  const decisionKey = `${query}\n${settings.focusGoal}\n${settings.similarityThreshold}`;
-  const previous = searchDecisionByTab.get(tabId);
-  if (
-    previous?.key === decisionKey &&
-    Date.now() - previous.time < SEARCH_DECISION_TTL_MS
-  )
-    return previous.promise;
-  const promise = evaluateSearchQuery(tabId, rawUrl, host, query);
-  searchDecisionByTab.set(tabId, {
-    key: decisionKey,
-    time: Date.now(),
-    promise,
-  });
-  return promise;
-}
-
-async function evaluateSearchQuery(tabId, rawUrl, host, query) {
-  const evidence = compactPageEvidence({
-    sourceType: "search",
-    title: query,
-    headings: [],
-    keywords: extractKeywords(query),
-    text: query,
-  });
-  const threshold = settings.similarityThreshold;
-  let score;
-  let reason = "This Google search does not match your class focus goal.";
-  try {
-    score = await scoreRelevance(settings.focusGoal, evidence);
-  } catch (error) {
-    lastModelError = String(error?.message || error);
-    score = 0;
-    reason =
-      "Focuify could not load its local relevance model. This search is blocked until the model is ready.";
-  }
-  const action = score < threshold ? "blocked" : "allowed";
-  if (action === "blocked") {
-    const blocked = await blockTab(tabId, {
-      url: rawUrl,
-      domain: host,
-      similarity: score,
-      reason,
-    });
-    if (!blocked) return false;
-  }
-  reportStudentStatus(action === "allowed" ? "focused" : "blocked");
-  return action === "blocked";
 }
 
 async function warmLocalModel() {
@@ -932,64 +272,29 @@ async function warmLocalModel() {
   modelWarmPromise = requestTextRanking("study the assigned lesson", [
     "Assigned lesson study material.",
   ])
-    .then((result) => {
-      noteInference(result);
-      lastModelError = "";
-      return result;
-    })
-    .catch((error) => {
-      lastModelError = String(error?.message || error);
-      throw error;
-    })
+    .catch(() => [])
     .finally(() => {
       modelWarmPromise = null;
     });
   return modelWarmPromise;
 }
 
-function noteInference(result) {
-  const count = Math.max(0, Number(modelRuntimeStats.inferenceCount) || 0) + 1;
-  const durationMs = Math.max(0, Number(result?.durationMs) || 0);
-  const average =
-    ((Number(modelRuntimeStats.avgInferenceMs) || 0) * (count - 1) +
-      durationMs) /
-    count;
-  modelRuntimeStats = sanitizeModelRuntimeStats({
-    ...modelRuntimeStats,
-    modelVersion: String(
-      result?.modelVersion || modelRuntimeStats.modelVersion,
-    ),
-    loadDurationMs: Math.max(
-      Number(modelRuntimeStats.loadDurationMs) || 0,
-      Number(result?.loadDurationMs) || 0,
-    ),
-    inferenceCount: count,
-    avgInferenceMs: average,
-  });
-  lastModelError = "";
-  void chrome.storage.local.set({ modelRuntimeStats });
-}
-
 async function maybeBlockByDomain(tabId, rawUrl) {
-  await maybeSyncClassPolicy();
   if (!isFocusModeActive() || !isHttpUrl(rawUrl)) return false;
   const host = normalizeDomain(new URL(rawUrl).hostname);
   if (
     !host ||
-    isClassServerHost(host) ||
     hostMatchesAny(host, settings.allowDomains) ||
     hasValidOneTimeBypass(tabId, host)
   )
     return false;
   if (!hostMatchesAny(host, settings.blockDomains)) return false;
-  const blocked = await blockTab(tabId, {
+  return blockTab(tabId, {
     url: rawUrl,
     domain: host,
     similarity: 0,
     reason: "Manually blocked domain",
   });
-  if (blocked) reportStudentStatus("blocked");
-  return blocked;
 }
 
 async function blockTab(tabId, context) {
@@ -1038,7 +343,6 @@ function publicBlockedContext(context) {
     threshold: context.threshold,
     goal: context.goal,
     reason: context.reason,
-    classManaged: Boolean(classSession),
   };
 }
 
@@ -1059,8 +363,6 @@ async function consumeBlockedContext(tabId) {
 
 async function allowOnceOpen(tabId) {
   await initPromise;
-  if (classSession)
-    throw new Error("Your teacher controls this focus session.");
   const context = await consumeBlockedContext(tabId);
   const host = normalizeDomain(new URL(context.url).hostname);
   oneTimeBypassByTab.set(tabId, {
@@ -1072,8 +374,6 @@ async function allowOnceOpen(tabId) {
 
 async function allowDomainOpen(tabId) {
   await initPromise;
-  if (classSession)
-    throw new Error("Your teacher controls this focus session.");
   const context = await consumeBlockedContext(tabId);
   const host = normalizeDomain(new URL(context.url).hostname);
   settings = sanitizeSettings({
@@ -1124,18 +424,6 @@ async function broadcastPageScan() {
 
 function isFocusModeActive() {
   return Boolean(settings.enabled && settings.focusGoal);
-}
-function isClassServerHost(host) {
-  if (!classSession?.apiBaseUrl) return false;
-  try {
-    const apiHost = new URL(classSession.apiBaseUrl).hostname.toLowerCase();
-    const localHosts = new Set(["localhost", "127.0.0.1", "[::1]"]);
-    return (
-      host === apiHost || (localHosts.has(host) && localHosts.has(apiHost))
-    );
-  } catch {
-    return false;
-  }
 }
 function clearDecisionCache() {
   decisionCache.clear();
@@ -1193,7 +481,6 @@ function sanitizeSettings(next) {
       0.1,
       0.9,
     ),
-    searchGuardEnabled: Boolean(next?.searchGuardEnabled),
     allowDomains: uniqueDomains(next?.allowDomains),
     blockDomains: uniqueDomains(next?.blockDomains),
     themeMode: sanitizeThemeMode(next?.themeMode),
@@ -1207,21 +494,6 @@ function sanitizeThemeMode(value) {
     ? String(value).toLowerCase()
     : "light";
 }
-function sanitizeModelRuntimeStats(value) {
-  return {
-    modelVersion: sanitizeText(
-      value?.modelVersion || MODEL_RUNTIME_STATS_DEFAULT.modelVersion,
-      80,
-    ),
-    loadDurationMs: clamp(Number(value?.loadDurationMs) || 0, 0, 3_600_000),
-    inferenceCount: clamp(
-      Math.floor(Number(value?.inferenceCount) || 0),
-      0,
-      1_000_000_000,
-    ),
-    avgInferenceMs: clamp(Number(value?.avgInferenceMs) || 0, 0, 3_600_000),
-  };
-}
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
@@ -1233,11 +505,4 @@ function hashString(input) {
       (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
   }
   return (hash >>> 0).toString(16);
-}
-
-class FocusApiError extends Error {
-  constructor(status, message) {
-    super(message);
-    this.status = status;
-  }
 }

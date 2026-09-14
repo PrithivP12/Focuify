@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
-    <main class="app" id="appRoot">
+    <main class="app">
       <header class="topbar">
         <div class="brand">
           <img class="brand-logo" src="focuify-logo.png" alt="Focuify" />
@@ -59,7 +59,6 @@
               ></span
             ></label>
           </div>
-
           <div class="field">
             <label for="focusGoal">Focus goal</label>
             <textarea
@@ -69,75 +68,11 @@
               placeholder="Study cellular respiration"
             ></textarea>
           </div>
-
           <button id="saveButton" class="button primary wide" type="button">
             Start focus session
           </button>
           <p id="statusText" class="status" role="status"></p>
         </section>
-
-        <details class="card disclosure" id="classCard">
-          <summary>
-            <span
-              ><strong>Teacher class</strong
-              ><small id="classSummaryText"
-                >Connect with a class code</small
-              ></span
-            >
-            <span class="chevron" aria-hidden="true">⌄</span>
-          </summary>
-          <div class="stack detail-content">
-            <p id="classStatus" class="class-status">Not connected.</p>
-            <div class="field-grid">
-              <div class="field">
-                <label for="classCode">Class code</label
-                ><input
-                  id="classCode"
-                  type="text"
-                  maxlength="6"
-                  autocomplete="off"
-                  autocapitalize="characters"
-                  placeholder="ABC234"
-                />
-              </div>
-              <div class="field">
-                <label for="studentName">Your name</label
-                ><input
-                  id="studentName"
-                  type="text"
-                  maxlength="80"
-                  autocomplete="name"
-                  placeholder="Student name"
-                />
-              </div>
-            </div>
-            <details class="advanced">
-              <summary>Advanced connection</summary>
-              <div class="field">
-                <label for="apiBaseUrl">Class server URL</label
-                ><input
-                  id="apiBaseUrl"
-                  type="url"
-                  placeholder="http://localhost:8787"
-                />
-              </div>
-            </details>
-            <div class="class-actions">
-              <button id="joinClassButton" class="button primary" type="button">
-                Join</button
-              ><button id="syncClassButton" class="button" type="button">
-                Refresh</button
-              ><button
-                id="leaveClassButton"
-                class="button danger"
-                type="button"
-              >
-                Leave
-              </button>
-            </div>
-            <p id="classMessage" class="status" role="status"></p>
-          </div>
-        </details>
       </section>
 
       <section
@@ -152,12 +87,11 @@
             <h2>Settings</h2>
             <p class="supporting">Adjust how Focuify works for you.</p>
           </div>
-
           <div class="setting-group">
             <div class="field">
               <div class="label-row">
-                <label for="threshold">Blocking level</label
-                ><strong id="thresholdValue" class="value-badge"
+                <label for="threshold">Blocking level</label>
+                <strong id="thresholdValue" class="value-badge"
                   >Balanced</strong
                 >
               </div>
@@ -172,16 +106,12 @@
                 <span>Lenient</span><span>Strict</span>
               </div>
             </div>
-            <p id="managedSettingsNote" class="managed-note" hidden>
-              Your teacher controls this setting.
-            </p>
           </div>
-
           <div class="setting-group">
             <div class="field-grid even">
               <div class="field">
-                <label for="themeMode">Theme</label
-                ><select id="themeMode">
+                <label for="themeMode">Theme</label>
+                <select id="themeMode">
                   <option value="light">Light</option>
                   <option value="dark">Dark</option>
                   <option value="zen">Zen</option>
@@ -189,8 +119,8 @@
               </div>
               <div class="field">
                 <div class="label-row">
-                  <label for="fontScale">Text size</label
-                  ><strong id="fontScaleValue" class="plain-value">100%</strong>
+                  <label for="fontScale">Text size</label>
+                  <strong id="fontScaleValue" class="plain-value">100%</strong>
                 </div>
                 <input
                   id="fontScale"
@@ -202,48 +132,43 @@
               </div>
             </div>
             <div class="setting-row">
-              <strong>Higher contrast</strong
-              ><label class="toggle" for="highContrast"
+              <strong>Higher contrast</strong>
+              <label class="toggle" for="highContrast"
                 ><input id="highContrast" type="checkbox" /><span
                   aria-hidden="true"
                 ></span
               ></label>
             </div>
             <div class="setting-row">
-              <strong>Reduce motion</strong
-              ><label class="toggle" for="reducedMotion"
+              <strong>Reduce motion</strong>
+              <label class="toggle" for="reducedMotion"
                 ><input id="reducedMotion" type="checkbox" /><span
                   aria-hidden="true"
                 ></span
               ></label>
             </div>
           </div>
-
           <details class="advanced site-rules">
             <summary>Site exceptions</summary>
             <div class="stack">
               <div class="field">
-                <label for="allowDomains">Always allow</label
-                ><textarea
+                <label for="allowDomains">Always allow</label>
+                <textarea
                   id="allowDomains"
                   rows="2"
                   placeholder="wikipedia.org"
                 ></textarea>
               </div>
               <div class="field">
-                <label for="blockDomains">Always block</label
-                ><textarea
+                <label for="blockDomains">Always block</label>
+                <textarea
                   id="blockDomains"
                   rows="2"
                   placeholder="example.com"
                 ></textarea>
               </div>
-              <p id="managedRulesNote" class="managed-note" hidden>
-                Site rules are locked during a teacher-managed class.
-              </p>
             </div>
           </details>
-
           <p id="settingsStatusText" class="status autosave" role="status">
             Changes save automatically.
           </p>

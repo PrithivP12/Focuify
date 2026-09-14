@@ -6,14 +6,11 @@ const thresholdText = document.getElementById("thresholdText");
 const openOnceButton = document.getElementById("openOnceButton");
 const allowDomainButton = document.getElementById("allowDomainButton");
 const goBackButton = document.getElementById("goBackButton");
-const overrideActions = document.getElementById("overrideActions");
-const managedNote = document.getElementById("managedNote");
 
 openOnceButton.disabled = true;
 allowDomainButton.disabled = true;
 void loadAccessibility();
 void loadContext();
-setInterval(() => sendMessage({ type: "FOCUIFY_HEARTBEAT" }), 30_000);
 
 async function loadAccessibility() {
   const response = await sendMessage({ type: "GET_ACCESSIBILITY_SETTINGS" });
@@ -45,11 +42,6 @@ async function loadContext() {
   domainText.textContent = context.domain || "(unknown)";
   scoreText.textContent = context.score || "?";
   thresholdText.textContent = context.threshold || "?";
-  if (context.classManaged) {
-    overrideActions.hidden = true;
-    managedNote.hidden = false;
-    return;
-  }
   openOnceButton.disabled = false;
   allowDomainButton.disabled = false;
 }

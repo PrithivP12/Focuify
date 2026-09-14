@@ -1,68 +1,3 @@
-const STOPWORDS = new Set([
-  "about",
-  "after",
-  "again",
-  "also",
-  "and",
-  "are",
-  "because",
-  "been",
-  "before",
-  "being",
-  "between",
-  "could",
-  "from",
-  "have",
-  "into",
-  "more",
-  "most",
-  "other",
-  "over",
-  "same",
-  "some",
-  "than",
-  "that",
-  "their",
-  "there",
-  "these",
-  "they",
-  "this",
-  "those",
-  "through",
-  "under",
-  "using",
-  "were",
-  "which",
-  "while",
-  "with",
-  "would",
-  "your",
-  "the",
-  "for",
-  "not",
-  "you",
-  "study",
-]);
-
-export function extractKeywords(value, limit = 36) {
-  const counts = new Map();
-  const words =
-    String(value || "")
-      .toLowerCase()
-      .match(/[a-z][a-z0-9-]{2,}/g) || [];
-  for (const word of words) {
-    if (STOPWORDS.has(word) || word.length > 42) continue;
-    counts.set(word, (counts.get(word) || 0) + 1);
-  }
-  return [...counts.entries()]
-    .sort(
-      (a, b) =>
-        b[1] - a[1] || b[0].length - a[0].length || a[0].localeCompare(b[0]),
-    )
-    .slice(0, Math.max(1, Math.min(80, Number(limit) || 36)))
-    .map(([word]) => word);
-}
-
 export function compactPageEvidence(
   payload,
   maxChars = 1500,
@@ -95,17 +30,14 @@ export function compactPageEvidence(
         channel,
         headings,
         description: metaDescription,
-        sourceType: ["video", "search"].includes(payload?.sourceType)
-          ? payload.sourceType
-          : "page",
+        sourceType: payload?.sourceType === "video" ? "video" : "page",
       }
     : null;
 }
 
 export function rankingDocuments(evidence) {
   if (!evidence?.compact) return [];
-  if (!["video", "search"].includes(evidence.sourceType))
-    return [evidence.compact];
+  if (evidence.sourceType !== "video") return [evidence.compact];
   return [
     ...new Set(
       [
@@ -116,18 +48,6 @@ export function rankingDocuments(evidence) {
       ].filter((value) => value.length >= 3),
     ),
   ];
-}
-
-export function extractSearchQuery(value) {
-  try {
-    const url = new URL(String(value || ""));
-    const host = url.hostname.toLowerCase().replace(/^www\./, "");
-    if (!/^google\.[a-z.]{2,}$/.test(host) || url.pathname !== "/search")
-      return "";
-    return sanitizeText(url.searchParams.get("q"), 220);
-  } catch {
-    return "";
-  }
 }
 
 export function sanitizeText(value, maxChars = 1000) {

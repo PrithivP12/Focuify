@@ -32,11 +32,5 @@ export async function requestTextRanking(query, documents) {
     throw new Error(
       response?.error || "Local relevance worker did not respond.",
     );
-  return {
-    scores: Array.isArray(response.scores) ? response.scores.map(Number) : [],
-    modelVersion: String(response.modelVersion || ""),
-    backend: String(response.backend || ""),
-    durationMs: Math.max(0, Number(response.durationMs) || 0),
-    loadDurationMs: Math.max(0, Number(response.loadDurationMs) || 0),
-  };
+  return Array.isArray(response.scores) ? response.scores.map(Number) : [];
 }

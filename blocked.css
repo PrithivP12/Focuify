@@ -9,7 +9,6 @@
   --accent: #1e7a64;
   --accent-dark: #155545;
   --accent-soft: #e2f1eb;
-  --teal: #3b6255;
   --teal-soft: #dce9e3;
 }
 
@@ -24,7 +23,6 @@ body[data-theme="dark"] {
   --accent: #64c4a5;
   --accent-dark: #4bae8e;
   --accent-soft: #203d33;
-  --teal: #84bca8;
   --teal-soft: #293f38;
 }
 
@@ -38,7 +36,6 @@ body[data-theme="zen"] {
   --accent: #527663;
   --accent-dark: #3e5d4d;
   --accent-soft: #e0ebe2;
-  --teal: #527663;
   --teal-soft: #e0ebe2;
 }
 
@@ -57,10 +54,6 @@ body[data-theme="dark"][data-high-contrast="true"] {
 * {
   box-sizing: border-box;
 }
-[hidden] {
-  display: none !important;
-}
-
 body {
   margin: 0;
   min-height: 100vh;
@@ -142,17 +135,6 @@ h1 {
   font-size: 1rem;
   line-height: 1.6;
 }
-.managed-note {
-  margin: 18px 0 0;
-  border-left: 4px solid var(--accent);
-  border-radius: 0 11px 11px 0;
-  padding: 11px 13px;
-  color: var(--text);
-  background: var(--accent-soft);
-  font-size: 0.88rem;
-  font-weight: 650;
-}
-
 .metrics {
   display: grid;
   grid-template-columns: 1.4fr 1fr 1fr;

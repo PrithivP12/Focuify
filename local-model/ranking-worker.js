@@ -77,7 +77,6 @@ async function fetchManifest() {
 
 async function loadRuntimeOnce() {
   const manifest = await fetchManifest();
-  const started = performance.now();
   const options = { local_files_only: true };
   const tokenizer = await AutoTokenizer.from_pretrained(
     manifest.modelPath,
@@ -91,12 +90,7 @@ async function loadRuntimeOnce() {
       dtype: manifest.dtype,
     },
   );
-  return {
-    manifest,
-    tokenizer,
-    model,
-    loadDurationMs: performance.now() - started,
-  };
+  return { manifest, tokenizer, model };
 }
 
 async function loadRuntime() {
@@ -153,16 +147,14 @@ function sigmoid(value) {
 
 async function rank({ query, documents }) {
   validateRequest(query, documents);
-  const { manifest, tokenizer, model, loadDurationMs } = await loadRuntime();
+  const { manifest, tokenizer, model } = await loadRuntime();
   const inputs = tokenizer(new Array(documents.length).fill(query), {
     text_pair: documents,
     padding: true,
     truncation: true,
     max_length: manifest.maxLength,
   });
-  const started = performance.now();
   const { logits } = await model(inputs);
-  const durationMs = performance.now() - started;
   const values = Array.from(logits?.data || []);
   if (
     values.length !== documents.length ||
@@ -172,10 +164,6 @@ async function rank({ query, documents }) {
   }
   return {
     scores: values.map(sigmoid),
-    modelVersion: manifest.modelVersion,
-    backend: "wasm",
-    durationMs,
-    loadDurationMs,
   };
 }
 

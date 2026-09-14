@@ -216,7 +216,6 @@ label {
   justify-content: space-between;
   gap: 10px;
 }
-small,
 .status,
 .model {
   color: var(--muted);
@@ -244,8 +243,6 @@ small,
 }
 
 textarea,
-input[type="text"],
-input[type="url"],
 select {
   width: 100%;
   border: 1px solid var(--line);
@@ -260,8 +257,6 @@ textarea {
   resize: vertical;
 }
 textarea:focus,
-input[type="text"]:focus,
-input[type="url"]:focus,
 select:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(30, 122, 100, 0.12);
@@ -353,64 +348,12 @@ input[type="range"] {
 .button.primary:hover {
   background: var(--accent-dark);
 }
-.button.danger {
-  color: var(--danger);
-  background: transparent;
-}
 .button.wide {
   width: 100%;
 }
-.button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.disclosure {
-  overflow: hidden;
-}
-.disclosure > summary {
-  justify-content: space-between;
-  gap: 10px;
-  padding: 13px 14px;
-  list-style: none;
-  cursor: pointer;
-}
-.disclosure > summary::-webkit-details-marker,
 .advanced > summary::-webkit-details-marker {
   display: none;
 }
-.disclosure > summary > span:first-child {
-  display: grid;
-}
-.disclosure > summary strong {
-  font-size: 12px;
-}
-.chevron {
-  color: var(--muted);
-  transition: transform 0.15s;
-}
-.disclosure[open] > summary .chevron {
-  transform: rotate(180deg);
-}
-.detail-content {
-  border-top: 1px solid var(--line);
-  padding: 14px;
-}
-.class-status {
-  margin: 0;
-  color: var(--muted);
-  font-size: 10px;
-}
-.class-status.connected {
-  color: var(--success);
-  font-weight: 750;
-}
-.class-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 7px;
-}
-
 .settings-card {
   gap: 0;
 }
@@ -452,15 +395,6 @@ input[type="range"] {
 .site-rules {
   margin: 15px 0;
 }
-.managed-note {
-  margin: 0;
-  border-radius: 8px;
-  padding: 8px 9px;
-  color: var(--muted);
-  background: var(--soft);
-  font-size: 10px;
-}
-
 .privacy-note {
   justify-content: center;
   gap: 6px;
@@ -469,12 +403,6 @@ input[type="range"] {
 .privacy-note > span {
   color: var(--success);
   font-weight: 900;
-}
-input:disabled,
-textarea:disabled,
-select:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
 }
 body[data-reduced-motion="true"] *,
 body[data-reduced-motion="true"] *::before,
