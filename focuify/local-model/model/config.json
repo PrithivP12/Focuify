@@ -1,9 +1,11 @@
 {
-  "_name_or_path": "mixedbread-ai/mxbai-rerank-xsmall-v1",
   "architectures": [
     "DebertaV2ForSequenceClassification"
   ],
   "attention_probs_dropout_prob": 0.1,
+  "bos_token_id": null,
+  "dtype": "float32",
+  "eos_token_id": null,
   "hidden_act": "gelu",
   "hidden_dropout_prob": 0.1,
   "hidden_size": 384,
@@ -16,6 +18,7 @@
     "LABEL_0": 0
   },
   "layer_norm_eps": 1e-07,
+  "legacy": true,
   "max_position_embeddings": 512,
   "max_relative_positions": -1,
   "model_type": "deberta-v2",
@@ -34,8 +37,8 @@
   "position_buckets": 256,
   "relative_attention": true,
   "share_att_key": true,
-  "torch_dtype": "float16",
-  "transformers_version": "4.38.1",
+  "tie_word_embeddings": true,
+  "transformers_version": "5.16.1",
   "type_vocab_size": 0,
   "vocab_size": 128100
 }

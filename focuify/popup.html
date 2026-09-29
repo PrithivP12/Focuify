@@ -98,9 +98,9 @@
               <input
                 id="threshold"
                 type="range"
-                min="0.20"
-                max="0.80"
-                step="0.01"
+                min="0"
+                max="1"
+                step="0.05"
               />
               <div class="range-labels">
                 <span>Lenient</span><span>Strict</span>
@@ -167,6 +167,19 @@
                   placeholder="example.com"
                 ></textarea>
               </div>
+            </div>
+          </details>
+          <details class="advanced model-data">
+            <summary>Model data</summary>
+            <div class="stack">
+              <p class="supporting">
+                Corrections stay on this device. Export them as training data
+                when you want to improve a future model.
+              </p>
+              <button id="exportFeedbackButton" class="button" type="button">
+                Export my corrections
+              </button>
+              <p id="feedbackStatusText" class="status" role="status"></p>
             </div>
           </details>
           <p id="settingsStatusText" class="status autosave" role="status">

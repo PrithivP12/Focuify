@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "focuify-model"
+version = "0.2.0"
+description = "Training and release pipeline for Focuify's local relevance model"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.26",
+  "onnx>=1.16",
+  "onnxruntime>=1.18",
+  "scikit-learn>=1.4",
+  "torch>=2.3",
+  "transformers>=4.41"
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

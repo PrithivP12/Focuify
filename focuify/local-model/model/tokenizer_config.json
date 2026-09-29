@@ -1,51 +1,13 @@
 {
-  "added_tokens_decoder": {
-    "0": {
-      "content": "[PAD]",
-      "lstrip": false,
-      "normalized": false,
-      "rstrip": false,
-      "single_word": false,
-      "special": true
-    },
-    "1": {
-      "content": "[CLS]",
-      "lstrip": false,
-      "normalized": false,
-      "rstrip": false,
-      "single_word": false,
-      "special": true
-    },
-    "2": {
-      "content": "[SEP]",
-      "lstrip": false,
-      "normalized": false,
-      "rstrip": false,
-      "single_word": false,
-      "special": true
-    },
-    "3": {
-      "content": "[UNK]",
-      "lstrip": false,
-      "normalized": true,
-      "rstrip": false,
-      "single_word": false,
-      "special": true
-    },
-    "128000": {
-      "content": "[MASK]",
-      "lstrip": false,
-      "normalized": false,
-      "rstrip": false,
-      "single_word": false,
-      "special": true
-    }
-  },
+  "add_prefix_space": true,
+  "backend": "tokenizers",
   "bos_token": "[CLS]",
   "clean_up_tokenization_spaces": true,
   "cls_token": "[CLS]",
   "do_lower_case": false,
   "eos_token": "[SEP]",
+  "is_local": true,
+  "local_files_only": true,
   "mask_token": "[MASK]",
   "max_length": 510,
   "model_max_length": 512,
@@ -60,6 +22,7 @@
   "tokenizer_class": "DebertaV2Tokenizer",
   "truncation_side": "right",
   "truncation_strategy": "longest_first",
+  "unk_id": 3,
   "unk_token": "[UNK]",
   "vocab_type": "spm"
 }

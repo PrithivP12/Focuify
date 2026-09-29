@@ -1,15 +1,16 @@
 import { requestTextRanking } from "./local-model/client.js";
+import { decideRelevance, normalizedGoalKey } from "./decisionPolicy.js";
+import { MODEL_POLICY } from "./modelPolicy.js";
 import {
   compactPageEvidence,
   rankingDocuments,
   sanitizeText,
 } from "./keywordUtils.js";
 
-const DEFAULT_SIMILARITY_THRESHOLD = 0.5;
 const DEFAULT_SETTINGS = Object.freeze({
   enabled: false,
   focusGoal: "",
-  similarityThreshold: DEFAULT_SIMILARITY_THRESHOLD,
+  blockingLevel: 0.35,
   allowDomains: [],
   blockDomains: [],
   themeMode: "light",
@@ -22,6 +23,8 @@ const DECISION_CACHE_TTL_MS = 15 * 60 * 1000;
 const DECISION_CACHE_MAX = 800;
 const ONE_TIME_BYPASS_TTL_MS = 10 * 60 * 1000;
 const BLOCKED_CONTEXT_PREFIX = "blockedContext:";
+const MODEL_FEEDBACK_KEY = "modelFeedback";
+const MODEL_FEEDBACK_LIMIT = 200;
 
 let settings = { ...DEFAULT_SETTINGS };
 let modelWarmPromise = null;
@@ -56,7 +59,7 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
   if (
     changes.enabled ||
     changes.focusGoal ||
-    changes.similarityThreshold ||
+    changes.blockingLevel ||
     changes.allowDomains ||
     changes.blockDomains
   ) {
@@ -141,6 +144,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       );
     return true;
   }
+  if (type === "MARK_RELEVANT_AND_OPEN") {
+    if (!isBlockedPageSender(sender)) return false;
+    void markRelevantAndOpen(sender?.tab?.id)
+      .then(() => sendResponse({ ok: true }))
+      .catch((error) =>
+        sendResponse({ ok: false, error: String(error?.message || error) }),
+      );
+    return true;
+  }
+  if (type === "GET_MODEL_FEEDBACK") {
+    if (sender?.url !== chrome.runtime.getURL("popup.html")) return false;
+    void getModelFeedback().then((feedback) =>
+      sendResponse({ ok: true, feedback }),
+    );
+    return true;
+  }
   return false;
 });
 
@@ -158,10 +177,14 @@ async function init() {
 }
 
 async function hydrateSettings() {
-  const stored = await chrome.storage.local.get(DEFAULT_SETTINGS);
+  const raw = await chrome.storage.local.get(null);
+  const stored = { ...DEFAULT_SETTINGS, ...raw };
+  if (!("blockingLevel" in raw) && "similarityThreshold" in raw) {
+    stored.blockingLevel = legacyBlockingLevel(raw.similarityThreshold);
+  }
   settings = sanitizeSettings(stored);
   await chrome.storage.local.set(settings);
-  const currentKeys = new Set(Object.keys(DEFAULT_SETTINGS));
+  const currentKeys = new Set([...Object.keys(DEFAULT_SETTINGS), MODEL_FEEDBACK_KEY]);
   const unusedKeys = Object.keys(await chrome.storage.local.get(null)).filter(
     (key) => !currentKeys.has(key),
   );
@@ -236,18 +259,30 @@ async function handleAnalyzeMessage(message, sender) {
 
   const evidence = compactPageEvidence(payload);
   if (!evidence) return;
-  const threshold = settings.similarityThreshold;
   try {
     const score = await scoreRelevance(settings.focusGoal, evidence);
-    if (score < threshold) {
+    const feedback = await positiveFeedbackForGoal(settings.focusGoal);
+    if (feedback.some((entry) => entry.pageText === evidence.compact)) return;
+    const decision = decideRelevance(
+      score,
+      settings.blockingLevel,
+      MODEL_POLICY,
+      feedback.map((entry) => Number(entry.score)),
+    );
+    if (decision.state === "off_task") {
       await blockTab(tabId, {
         url: rawUrl,
         domain: host,
-        similarity: score,
-        reason: "This page does not match your focus goal.",
+        similarity: decision.score,
+        threshold: decision.blockThreshold,
+        evidence: evidence.compact,
+        reason: "The page looks unrelated to your current focus goal.",
       });
     }
-  } catch {}
+  } catch (error) {
+    // Inference fails open so a model error never traps the user on a page.
+    console.warn("Focuify could not score this page.", error);
+  }
 }
 
 async function scoreRelevance(goal, evidence) {
@@ -314,8 +349,11 @@ async function blockTab(tabId, context) {
         url: context.url,
         domain: context.domain,
         score: Number(context.similarity || 0).toFixed(3),
-        threshold: Number(settings.similarityThreshold).toFixed(3),
+        threshold: Number(
+          context.threshold ?? MODEL_POLICY.blockThreshold,
+        ).toFixed(3),
         goal: settings.focusGoal,
+        evidence: sanitizeText(context.evidence, 2400),
         reason:
           context.reason || "This page does not match your active focus goal.",
       },
@@ -382,6 +420,53 @@ async function allowDomainOpen(tabId) {
   });
   await chrome.storage.local.set({ allowDomains: settings.allowDomains });
   await chrome.tabs.update(tabId, { url: context.url });
+}
+
+async function markRelevantAndOpen(tabId) {
+  await initPromise;
+  const context = await consumeBlockedContext(tabId);
+  const pageText = sanitizeText(context.evidence, 2400);
+  if (pageText) {
+    const feedback = await getModelFeedback();
+    feedback.push({
+      goal: sanitizeText(context.goal, 220),
+      goalKey: normalizedGoalKey(context.goal),
+      pageText,
+      label: 1,
+      score: Number(context.score),
+      source: "explicit_block_override",
+      createdAt: new Date().toISOString(),
+    });
+    await chrome.storage.local.set({
+      [MODEL_FEEDBACK_KEY]: feedback.slice(-MODEL_FEEDBACK_LIMIT),
+    });
+  }
+  oneTimeBypassByTab.set(tabId, {
+    domain: normalizeDomain(new URL(context.url).hostname),
+    expiresAt: Date.now() + ONE_TIME_BYPASS_TTL_MS,
+  });
+  clearDecisionCache();
+  await chrome.tabs.update(tabId, { url: context.url });
+}
+
+async function getModelFeedback() {
+  const stored = await chrome.storage.local.get({ [MODEL_FEEDBACK_KEY]: [] });
+  return (Array.isArray(stored[MODEL_FEEDBACK_KEY])
+    ? stored[MODEL_FEEDBACK_KEY]
+    : []
+  ).filter(
+    (entry) =>
+      entry &&
+      entry.label === 1 &&
+      typeof entry.goal === "string" &&
+      typeof entry.pageText === "string" &&
+      Number.isFinite(Number(entry.score)),
+  );
+}
+
+async function positiveFeedbackForGoal(goal) {
+  const key = normalizedGoalKey(goal);
+  return (await getModelFeedback()).filter((entry) => entry.goalKey === key);
 }
 
 function publicAccessibilitySettings() {
@@ -476,11 +561,7 @@ function sanitizeSettings(next) {
   return {
     enabled: Boolean(next?.enabled),
     focusGoal: goal,
-    similarityThreshold: clamp(
-      Number(next?.similarityThreshold) || DEFAULT_SIMILARITY_THRESHOLD,
-      0.1,
-      0.9,
-    ),
+    blockingLevel: clamp(Number(next?.blockingLevel) || 0, 0, 1),
     allowDomains: uniqueDomains(next?.allowDomains),
     blockDomains: uniqueDomains(next?.blockDomains),
     themeMode: sanitizeThemeMode(next?.themeMode),
@@ -505,4 +586,15 @@ function hashString(input) {
       (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
   }
   return (hash >>> 0).toString(16);
+}
+
+function legacyBlockingLevel(value) {
+  const threshold = Number(value);
+  if (!Number.isFinite(threshold)) return DEFAULT_SETTINGS.blockingLevel;
+  return clamp(
+    (threshold - MODEL_POLICY.blockThreshold) /
+      ((MODEL_POLICY.allowThreshold - MODEL_POLICY.blockThreshold) * 0.75),
+    0,
+    1,
+  );
 }

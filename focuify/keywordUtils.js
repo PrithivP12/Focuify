@@ -37,17 +37,19 @@ export function compactPageEvidence(
 
 export function rankingDocuments(evidence) {
   if (!evidence?.compact) return [];
-  if (evidence.sourceType !== "video") return [evidence.compact];
+  const summary = sanitizeText(
+    [evidence.title, evidence.headings?.join(". "), evidence.description]
+      .filter(Boolean)
+      .join(". "),
+    760,
+  );
   return [
     ...new Set(
-      [
-        sanitizeText(evidence.title, 220),
-        sanitizeText(evidence.headings?.join(". "), 500),
-        sanitizeText(evidence.description, 500),
-        evidence.compact,
-      ].filter((value) => value.length >= 3),
+      [summary, ...splitText(evidence.compact, 900, 120), evidence.compact]
+        .map((value) => sanitizeText(value, 2400))
+        .filter((value) => value.length >= 3),
     ),
-  ];
+  ].slice(0, 8);
 }
 
 export function sanitizeText(value, maxChars = 1000) {
@@ -71,4 +73,15 @@ function sanitizeKeyword(value) {
     .toLowerCase()
     .replace(/[^a-z0-9-]/g, "")
     .slice(0, 48);
+}
+
+function splitText(value, size, overlap) {
+  const text = sanitizeText(value, 2400);
+  if (text.length <= size) return [text];
+  const chunks = [];
+  for (let start = 0; start < text.length; start += size - overlap) {
+    chunks.push(text.slice(start, start + size));
+    if (start + size >= text.length) break;
+  }
+  return chunks;
 }

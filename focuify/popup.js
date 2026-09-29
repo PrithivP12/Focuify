@@ -38,7 +38,7 @@ async function load() {
 function applySettings(settings) {
   enabled.checked = Boolean(settings.enabled);
   focusGoal.value = String(settings.focusGoal || "");
-  threshold.value = String(Number(settings.similarityThreshold) || 0.5);
+  threshold.value = String(Number(settings.blockingLevel) || 0);
   allowDomains.value = (settings.allowDomains || []).join("\n");
   blockDomains.value = (settings.blockDomains || []).join("\n");
   themeMode.value = settings.themeMode || "light";
@@ -53,7 +53,7 @@ function collectSettings() {
   return {
     enabled: enabled.checked,
     focusGoal: focusGoal.value.trim().slice(0, 220),
-    similarityThreshold: Number(threshold.value) || 0.5,
+    blockingLevel: Number(threshold.value) || 0,
     allowDomains: parseDomains(allowDomains.value),
     blockDomains: parseDomains(blockDomains.value),
     themeMode: themeMode.value,
@@ -150,7 +150,45 @@ function renderFocusState() {
 }
 
 function thresholdLabel(value) {
-  return value >= 0.6 ? "Strict" : value <= 0.4 ? "Lenient" : "Balanced";
+  return value >= 0.7 ? "Strict" : value <= 0.25 ? "Lenient" : "Balanced";
+}
+
+async function exportFeedback() {
+  const target = $("feedbackStatusText");
+  const response = await sendMessage({ type: "GET_MODEL_FEEDBACK" });
+  if (!response?.ok) {
+    setStatus(target, response?.error || "Could not export corrections.", true);
+    return;
+  }
+  const rows = Array.isArray(response.feedback) ? response.feedback : [];
+  if (!rows.length) {
+    setStatus(target, "No corrections to export yet.");
+    return;
+  }
+  const contents = rows
+    .map(({ goal, pageText, label, source, createdAt }) =>
+      JSON.stringify({
+        goal,
+        page_text: pageText,
+        label,
+        source,
+        created_at: createdAt,
+      }),
+    )
+    .join("\n");
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(
+    new Blob([`${contents}\n`], { type: "application/x-ndjson" }),
+  );
+  link.download = `focuify-feedback-${new Date().toISOString().slice(0, 10)}.jsonl`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(link.href);
+  setStatus(
+    target,
+    `Exported ${rows.length} correction${rows.length === 1 ? "" : "s"}.`,
+  );
 }
 
 function setStatus(element, text, error = false) {
@@ -161,6 +199,9 @@ function setStatus(element, text, error = false) {
 $("focusTab").addEventListener("click", () => switchView("focus"));
 $("settingsTab").addEventListener("click", () => switchView("settings"));
 $("saveButton").addEventListener("click", () => void save());
+$("exportFeedbackButton").addEventListener("click", () => {
+  void exportFeedback();
+});
 for (const input of [
   themeMode,
   fontScale,

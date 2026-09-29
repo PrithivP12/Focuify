@@ -4,10 +4,12 @@ const domainText = document.getElementById("domainText");
 const scoreText = document.getElementById("scoreText");
 const thresholdText = document.getElementById("thresholdText");
 const openOnceButton = document.getElementById("openOnceButton");
+const relevantButton = document.getElementById("relevantButton");
 const allowDomainButton = document.getElementById("allowDomainButton");
 const goBackButton = document.getElementById("goBackButton");
 
 openOnceButton.disabled = true;
+relevantButton.disabled = true;
 allowDomainButton.disabled = true;
 void loadAccessibility();
 void loadContext();
@@ -43,12 +45,22 @@ async function loadContext() {
   scoreText.textContent = context.score || "?";
   thresholdText.textContent = context.threshold || "?";
   openOnceButton.disabled = false;
+  relevantButton.disabled = false;
   allowDomainButton.disabled = false;
 }
 
 openOnceButton.addEventListener("click", async () => {
   const response = await sendMessage({ type: "ALLOW_ONCE_OPEN" });
   if (!response?.ok) window.alert(response?.error || "Could not open page.");
+});
+
+relevantButton.addEventListener("click", async () => {
+  relevantButton.disabled = true;
+  const response = await sendMessage({ type: "MARK_RELEVANT_AND_OPEN" });
+  if (!response?.ok) {
+    relevantButton.disabled = false;
+    window.alert(response?.error || "Could not save this correction.");
+  }
 });
 
 allowDomainButton.addEventListener("click", async () => {
