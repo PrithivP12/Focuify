@@ -165,15 +165,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 async function init() {
   if (isReady) return;
-  await chrome.storage.local.setAccessLevel({
-    accessLevel: "TRUSTED_CONTEXTS",
-  });
-  await chrome.storage.session.setAccessLevel({
-    accessLevel: "TRUSTED_CONTEXTS",
-  });
+  await restrictStorageAccess(chrome.storage.local);
+  await restrictStorageAccess(chrome.storage.session);
   await hydrateSettings();
   isReady = true;
   if (isFocusModeActive()) void warmLocalModel();
+}
+
+async function restrictStorageAccess(storageArea) {
+  if (typeof storageArea?.setAccessLevel !== "function") return;
+  await storageArea.setAccessLevel({ accessLevel: "TRUSTED_CONTEXTS" });
 }
 
 async function hydrateSettings() {
