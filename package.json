@@ -1,9 +1,0 @@
-{
-  "name": "focuify",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "test": "node --test tests/*.test.js",
-    "check": "node --check focuify/service_worker.js && node --check focuify/content_script.js && node --check focuify/popup.js && node --check focuify/blocked.js"
-  }
-}

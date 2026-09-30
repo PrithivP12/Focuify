@@ -1,5 +1,3 @@
 .DS_Store
 /focuify_teacher/
-/modeling/artifacts/
-/modeling/.pytest_cache/
-/modeling/**/__pycache__/
+/modeling/
