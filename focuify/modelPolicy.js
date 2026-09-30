@@ -1,4 +1,4 @@
 export const MODEL_POLICY = Object.freeze({
-  blockThreshold: 0.3757526086402893,
-  allowThreshold: 0.5072778655456543,
+  blockThreshold: 0.31297148956327053,
+  allowThreshold: 0.739246450113043,
 });
