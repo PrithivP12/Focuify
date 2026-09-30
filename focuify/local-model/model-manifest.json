@@ -1,16 +1,16 @@
 {
-  "block_threshold": 0.31297148956327053,
+  "block_threshold": 0.2562069672845002,
   "dtype": "q8",
   "max_length": 128,
   "model_file": "onnx/model_quantized.onnx",
-  "model_id": "focuify/focuify-relevance-v3",
+  "model_id": "focuify/focuify-relevance-v4",
   "model_path": "model",
-  "model_sha256": "76ac878312080a581d745f8f623c7525368fae68d3c7511e72200ce86088d50e",
-  "model_version": "focuify-relevance-v3.0.0",
+  "model_sha256": "de4e01a4df43bf6abb73c981814ad61f65c9653df18824001653fdf228b2dcff",
+  "model_version": "focuify-relevance-v4.0.0",
   "schema_version": 1,
   "score_transform": "sigmoid",
   "source_model": "mixedbread-ai/mxbai-rerank-xsmall-v1",
   "source_revision": "b5c6e9da73abc3711f593f705371cdbe9e0fe422",
   "status": "ready",
-  "threshold": 0.739246450113043
+  "threshold": 0.7654992035034467
 }
