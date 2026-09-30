@@ -268,7 +268,9 @@ async function handleAnalyzeMessage(message, sender) {
       score,
       settings.blockingLevel,
       MODEL_POLICY,
-      feedback.map((entry) => Number(entry.score)),
+      feedback
+        .filter((entry) => entry.modelVersion === MODEL_POLICY.modelVersion)
+        .map((entry) => Number(entry.score)),
     );
     if (decision.state === "off_task") {
       await blockTab(tabId, {
@@ -354,6 +356,7 @@ async function blockTab(tabId, context) {
           context.threshold ?? MODEL_POLICY.blockThreshold,
         ).toFixed(3),
         goal: settings.focusGoal,
+        modelVersion: MODEL_POLICY.modelVersion,
         evidence: sanitizeText(context.evidence, 2400),
         reason:
           context.reason || "This page does not match your active focus goal.",
@@ -435,6 +438,7 @@ async function markRelevantAndOpen(tabId) {
       pageText,
       label: 1,
       score: Number(context.score),
+      modelVersion: context.modelVersion,
       source: "explicit_block_override",
       createdAt: new Date().toISOString(),
     });

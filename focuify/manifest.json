@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Focuify",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "A private, local-first extension that keeps browsing aligned with a focus goal.",
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"

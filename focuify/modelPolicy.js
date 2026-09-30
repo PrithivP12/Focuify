@@ -1,4 +1,5 @@
 export const MODEL_POLICY = Object.freeze({
-  blockThreshold: 0.2562069672845002,
-  allowThreshold: 0.7654992035034467,
+  modelVersion: "focuify-relevance-v5.0.0",
+  blockThreshold: 0.16169250529336102,
+  allowThreshold: 0.8478941301042284,
 });
