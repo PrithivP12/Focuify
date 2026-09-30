@@ -32,7 +32,7 @@ async function load() {
     return;
   }
   applySettings(response.settings || {});
-  $("modelInfo").textContent = "Private on-device matching";
+  $("modelInfo").textContent = "Private, on-device matching";
 }
 
 function applySettings(settings) {
@@ -41,7 +41,8 @@ function applySettings(settings) {
   threshold.value = String(Number(settings.blockingLevel) || 0);
   allowDomains.value = (settings.allowDomains || []).join("\n");
   blockDomains.value = (settings.blockDomains || []).join("\n");
-  themeMode.value = settings.themeMode || "light";
+  themeMode.value =
+    settings.themeMode === "zen" ? "light" : settings.themeMode || "light";
   fontScale.value = String(Number(settings.fontScale) || 1);
   highContrast.checked = Boolean(settings.highContrast);
   reducedMotion.checked = Boolean(settings.reducedMotion);
@@ -103,6 +104,8 @@ function switchView(name) {
   $("settingsTab").classList.toggle("active", showSettings);
   $("focusTab").setAttribute("aria-selected", String(!showSettings));
   $("settingsTab").setAttribute("aria-selected", String(showSettings));
+  $("focusTab").tabIndex = showSettings ? -1 : 0;
+  $("settingsTab").tabIndex = showSettings ? 0 : -1;
 }
 
 function parseDomains(value) {
@@ -136,11 +139,11 @@ function renderAccessibility() {
 
 function renderFocusState() {
   const active = Boolean(enabled.checked && focusGoal.value.trim());
-  $("focusModePill").textContent = active ? "Active" : "Off";
+  $("focusModePill").textContent = active ? "On" : "Off";
   $("focusModePill").classList.toggle("active", active);
   $("focusStateTitle").textContent = active
     ? "You’re in focus mode"
-    : "Choose your focus";
+    : "What are you focusing on?";
   $("focusStateCopy").textContent = active
     ? "Pages are being checked against your goal."
     : "Set one clear goal so Focuify knows what belongs in this session.";
@@ -198,6 +201,16 @@ function setStatus(element, text, error = false) {
 
 $("focusTab").addEventListener("click", () => switchView("focus"));
 $("settingsTab").addEventListener("click", () => switchView("settings"));
+document.querySelector(".tabs").addEventListener("keydown", (event) => {
+  if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+  event.preventDefault();
+  let target;
+  if (event.key === "Home") target = $("focusTab");
+  else if (event.key === "End") target = $("settingsTab");
+  else target = event.target === $("focusTab") ? $("settingsTab") : $("focusTab");
+  switchView(target === $("settingsTab") ? "settings" : "focus");
+  target.focus();
+});
 $("saveButton").addEventListener("click", () => void save());
 $("exportFeedbackButton").addEventListener("click", () => {
   void exportFeedback();

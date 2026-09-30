@@ -7,6 +7,7 @@ const openOnceButton = document.getElementById("openOnceButton");
 const relevantButton = document.getElementById("relevantButton");
 const allowDomainButton = document.getElementById("allowDomainButton");
 const goBackButton = document.getElementById("goBackButton");
+const scoreRing = document.getElementById("scoreRing");
 
 openOnceButton.disabled = true;
 relevantButton.disabled = true;
@@ -18,7 +19,7 @@ async function loadAccessibility() {
   const response = await sendMessage({ type: "GET_ACCESSIBILITY_SETTINGS" });
   if (!response?.ok) return;
   const settings = response.settings || {};
-  document.body.dataset.theme = ["light", "dark", "zen"].includes(
+  document.body.dataset.theme = ["light", "dark", "system"].includes(
     settings.themeMode,
   )
     ? settings.themeMode
@@ -39,11 +40,30 @@ async function loadContext() {
     return;
   }
   summaryText.textContent =
-    context.reason || "This page does not match your active focus goal.";
+    context.reason === "Manually blocked domain"
+      ? "This site is on your always block list."
+      : `${context.domain || "This page"} doesn't look related to ${context.goal || "your goal"}.`;
   goalText.textContent = context.goal || "(not set)";
   domainText.textContent = context.domain || "(unknown)";
   scoreText.textContent = context.score || "?";
   thresholdText.textContent = context.threshold || "?";
+  const score = Number(context.score);
+  const threshold = Number(context.threshold);
+  if (Number.isFinite(score) && Number.isFinite(threshold)) {
+    scoreRing.style.setProperty(
+      "--score",
+      String(Math.min(1, Math.max(0, score))),
+    );
+    scoreRing.style.setProperty(
+      "--threshold",
+      String(Math.min(1, Math.max(0, threshold))),
+    );
+    scoreRing.setAttribute("aria-valuenow", String(score));
+    scoreRing.setAttribute(
+      "aria-valuetext",
+      `${context.score} match; needs ${context.threshold}`,
+    );
+  }
   openOnceButton.disabled = false;
   relevantButton.disabled = false;
   allowDomainButton.disabled = false;

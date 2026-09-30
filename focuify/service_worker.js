@@ -572,7 +572,7 @@ function sanitizeSettings(next) {
   };
 }
 function sanitizeThemeMode(value) {
-  return ["light", "dark", "zen"].includes(String(value || "").toLowerCase())
+  return ["light", "dark", "zen", "system"].includes(String(value || "").toLowerCase())
     ? String(value).toLowerCase()
     : "light";
 }

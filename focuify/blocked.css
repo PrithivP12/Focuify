@@ -1,238 +1,214 @@
-:root {
-  color-scheme: light;
-  --bg: #f7f2e9;
-  --panel: #fffdf9;
-  --surface: #f3eee5;
-  --text: #1e2a44;
-  --muted: #697086;
-  --border: #dedfdc;
-  --accent: #1e7a64;
-  --accent-dark: #155545;
-  --accent-soft: #e2f1eb;
-  --teal-soft: #dce9e3;
+@property --score-fill {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
 }
 
-body[data-theme="dark"] {
-  color-scheme: dark;
-  --bg: #181917;
-  --panel: #232421;
-  --surface: #2c2e2a;
-  --text: #f8f2e8;
-  --muted: #b8b4ad;
-  --border: #484844;
-  --accent: #64c4a5;
-  --accent-dark: #4bae8e;
-  --accent-soft: #203d33;
-  --teal-soft: #293f38;
-}
-
-body[data-theme="zen"] {
-  --bg: #eef3ed;
-  --panel: #fbfdfa;
-  --surface: #f0f5ef;
-  --text: #26342e;
-  --muted: #66736d;
-  --border: #d3ddd5;
-  --accent: #527663;
-  --accent-dark: #3e5d4d;
-  --accent-soft: #e0ebe2;
-  --teal-soft: #e0ebe2;
-}
-
-body[data-high-contrast="true"] {
-  --text: #050915;
-  --muted: #343947;
-  --border: #6e727c;
-  --panel: #fff;
-}
-body[data-theme="dark"][data-high-contrast="true"] {
-  --text: #fff;
-  --muted: #e2e2de;
-  --border: #a4a59f;
-  --panel: #10110f;
-}
-* {
-  box-sizing: border-box;
-}
 body {
-  margin: 0;
-  min-height: 100vh;
   display: grid;
   place-items: center;
-  padding: 24px;
-  background:
-    radial-gradient(900px 420px at 0 0, var(--accent-soft), transparent 68%),
-    radial-gradient(
-      800px 420px at 100% 100%,
-      var(--teal-soft),
-      transparent 70%
-    ),
-    var(--bg);
-  color: var(--text);
-  font-family:
-    Inter,
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
+  min-height: 100vh;
+  margin: 0;
+  padding: 1.5rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
 }
 
 .panel {
-  width: min(620px, 100%);
-  border: 1px solid var(--border);
-  border-radius: 28px;
-  padding: clamp(24px, 5vw, 46px);
-  background: var(--panel);
-  box-shadow: 0 24px 70px rgba(43, 35, 31, 0.13);
+  width: min(42rem, 100%);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  padding: clamp(1.5rem, 5vw, 2.75rem);
+  background: var(--glass);
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
+  box-shadow: var(--shadow);
+  text-align: center;
+  animation: card-in var(--duration-card) var(--spring) both;
 }
 
 .brand-row {
-  margin-bottom: 38px;
-}
-.brand-logo {
-  display: block;
-  width: 152px;
-  height: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  margin-bottom: 2rem;
 }
 
-.pause-mark {
-  width: 66px;
-  height: 66px;
+.score-ring {
+  --ring-size: 10.75rem;
+  --score: 0;
+  --threshold: 0;
+  position: relative;
   display: grid;
   place-items: center;
-  margin-bottom: 20px;
-  border-radius: 22px;
-  color: var(--accent);
-  background: var(--accent-soft);
-  font-size: 28px;
-  font-weight: 850;
-  transform: rotate(3deg);
+  width: var(--ring-size);
+  height: var(--ring-size);
+  margin: 0 auto 2rem;
+  border-radius: 50%;
+  background: conic-gradient(var(--primary) calc(var(--score-fill) * 1turn), var(--ring-track) 0);
+  animation: ring-fill 900ms var(--spring) 150ms both;
 }
-.pause-mark span {
-  transform: rotate(-3deg);
+
+.score-ring::after {
+  content: "";
+  position: absolute;
+  top: -0.25rem;
+  left: calc(50% - 1px);
+  width: 2px;
+  height: 1rem;
+  border-radius: var(--radius-pill);
+  background: var(--primary);
+  transform-origin: center calc(var(--ring-size) / 2 + 0.25rem);
+  transform: rotate(calc(var(--threshold) * 360deg));
 }
-.eyebrow {
-  margin: 0 0 6px;
-  color: var(--accent);
-  letter-spacing: 0.16em;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  font-weight: 850;
+
+.score-ring-center {
+  display: grid;
+  align-content: center;
+  width: calc(var(--ring-size) - 1.125rem);
+  height: calc(var(--ring-size) - 1.125rem);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--glass-strong);
 }
-h1 {
-  max-width: 520px;
-  margin: 0 0 12px;
-  font-size: clamp(2rem, 6vw, 3.2rem);
-  line-height: 1.02;
+
+.score-ring-center strong {
+  font-size: 2.25rem;
+  font-weight: 550;
+  line-height: 1.1;
   letter-spacing: -0.055em;
 }
-.summary {
-  max-width: 540px;
-  margin: 0;
+
+.score-ring-center span {
   color: var(--muted);
-  font-size: 1rem;
-  line-height: 1.6;
+  font-size: 0.8125rem;
 }
+
+.eyebrow {
+  margin: 0 0 0.5rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 2.125rem);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.05em;
+}
+
+.summary {
+  max-width: 32rem;
+  margin: 0.75rem auto 0;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  overflow-wrap: anywhere;
+}
+
 .metrics {
   display: grid;
-  grid-template-columns: 1.4fr 1fr 1fr;
-  gap: 1px;
-  overflow: hidden;
-  margin: 28px 0 22px;
-  border: 1px solid var(--border);
-  border-radius: 17px;
-  background: var(--border);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 1.75rem 0;
+  text-align: left;
 }
-.metrics div {
+
+.metrics > div {
   min-width: 0;
-  padding: 14px;
-  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 1.125rem;
+  padding: 0.875rem 1rem;
+  background: var(--field);
 }
+
 .metrics dt {
-  margin-bottom: 5px;
+  margin-bottom: 0.25rem;
   color: var(--muted);
-  font-size: 0.7rem;
-  font-weight: 760;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 0.75rem;
 }
+
 .metrics dd {
   margin: 0;
   overflow-wrap: anywhere;
-  font-weight: 760;
+  font-size: 0.875rem;
+  font-weight: 600;
 }
-.metrics small {
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 500;
-}
+
 .actions {
   display: grid;
-  gap: 10px;
+  gap: 0.75rem;
 }
+
 .override-actions {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.625rem;
 }
 
 button {
-  min-height: 44px;
-  border: 1px solid var(--border);
-  border-radius: 13px;
-  padding: 11px 14px;
-  color: var(--text);
-  background: var(--surface);
+  min-height: 2.75rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  padding: 0.65rem 0.75rem;
+  color: var(--ink);
+  background: var(--field);
   font: inherit;
-  font-weight: 780;
+  font-size: 0.8125rem;
+  font-weight: 650;
   cursor: pointer;
-  transition:
-    transform 0.16s,
-    border-color 0.16s,
-    background 0.16s;
+  transition: transform var(--duration-fast) var(--spring), background var(--duration-fast) ease;
 }
+
 button:hover {
+  background: var(--glass-strong);
   transform: translateY(-1px);
-  border-color: var(--accent);
 }
+
+button:active {
+  transform: scale(0.98);
+}
+
 button.primary {
-  color: #fff;
-  border-color: var(--accent);
-  background: var(--accent);
-  box-shadow: 0 8px 20px rgba(30, 122, 100, 0.2);
+  min-height: 3rem;
+  border-color: var(--primary);
+  color: var(--primary-ink);
+  background: var(--primary);
+  font-size: 0.9375rem;
 }
+
 button.primary:hover {
-  background: var(--accent-dark);
+  opacity: 0.9;
 }
+
 button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
-:focus-visible {
-  outline: 3px solid rgba(30, 122, 100, 0.3);
-  outline-offset: 3px;
-}
-body[data-reduced-motion="true"] *,
-body[data-reduced-motion="true"] *::before,
-body[data-reduced-motion="true"] *::after {
-  transition-duration: 0.001ms !important;
-  animation-duration: 0.001ms !important;
-  animation-iteration-count: 1 !important;
+
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(0.625rem); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-@media (max-width: 620px) {
-  .panel {
-    border-radius: 21px;
-  }
-  .brand-row {
-    margin-bottom: 28px;
-  }
-  .metrics {
-    grid-template-columns: 1fr;
-  }
-  .override-actions {
-    grid-template-columns: 1fr;
-  }
+@keyframes ring-fill {
+  to { --score-fill: var(--score); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .score-ring { --score-fill: var(--score); }
+}
+
+body[data-reduced-motion="true"] .score-ring {
+  --score-fill: var(--score);
+}
+
+@media (max-width: 540px) {
+  body { padding: 0.75rem; }
+  .panel { padding: 1.5rem; }
+  .metrics { grid-template-columns: 1fr; }
+  .override-actions { grid-template-columns: 1fr; }
 }

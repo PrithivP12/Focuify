@@ -219,7 +219,7 @@
   }
 
   function applyAccessibility(stored = {}) {
-    const theme = ["light", "dark", "zen"].includes(stored.themeMode)
+    const theme = ["light", "dark", "zen", "system"].includes(stored.themeMode)
       ? stored.themeMode
       : "light";
     const scale = Math.min(1.25, Math.max(0.85, Number(stored.fontScale) || 1));
@@ -236,7 +236,7 @@
     }
     style.textContent = `
     :root { font-size: calc(100% * var(--focuify-font-scale, 1)); }
-    ${stored.highContrast ? "* { text-shadow: none !important; } body { background: #fff !important; color: #000 !important; } a { color: #003cff !important; }" : ""}
+    ${stored.highContrast ? "* { text-shadow: none !important; } body { background: #fff !important; color: #000 !important; } a { color: #000 !important; text-decoration: underline !important; }" : ""}
     ${stored.reducedMotion ? "*, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.001ms !important; }" : ""}
   `;
   }

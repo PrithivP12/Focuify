@@ -5,17 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Paused by Focuify</title>
     <link rel="icon" href="icon.png" />
+    <link rel="stylesheet" href="design-tokens.css" />
     <link rel="stylesheet" href="blocked.css" />
   </head>
   <body>
     <main class="panel">
       <div class="brand-row">
-        <img class="brand-logo" src="focuify-logo.png" alt="Focuify" />
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-name">Focuify</span>
       </div>
 
-      <div class="pause-mark" aria-hidden="true"><span>!</span></div>
+      <div class="score-ring" id="scoreRing" role="meter" aria-label="Page match score" aria-valuemin="0" aria-valuemax="1">
+        <div class="score-ring-center">
+          <strong id="scoreText">—</strong>
+          <span>needs <span id="thresholdText">—</span></span>
+        </div>
+      </div>
       <p class="eyebrow">Focus check</p>
-      <h1>This page is outside your goal.</h1>
+      <h1>Let's get back to it.</h1>
       <p class="summary" id="summaryText"></p>
 
       <dl class="metrics">
@@ -27,23 +34,16 @@
           <dt>Page</dt>
           <dd id="domainText"></dd>
         </div>
-        <div>
-          <dt>Match score</dt>
-          <dd>
-            <span id="scoreText"></span>
-            <small>/ required <span id="thresholdText"></span></small>
-          </dd>
-        </div>
       </dl>
 
       <div class="actions">
         <button id="goBackButton" class="primary">
-          Go back to focused work
+          Back to focused work
         </button>
         <div class="override-actions">
-          <button id="relevantButton">This page helps my goal</button>
+          <button id="relevantButton">Helps my goal</button>
           <button id="openOnceButton">Open once</button>
-          <button id="allowDomainButton">Always allow this site</button>
+          <button id="allowDomainButton">Always allow</button>
         </div>
       </div>
     </main>
